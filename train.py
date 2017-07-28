@@ -51,6 +51,7 @@ def train(model, train_loader, epoch, optimizer, criterion, tb_train=None):
                 data={'loss': loss.data[0]},
                 step=epoch)
 
+
 def val(model, val_loader, epoch, optimizer, criterion, tb_valid=None):
     model.eval()
     criterion.size_average = False
