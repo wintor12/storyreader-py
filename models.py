@@ -1,10 +1,8 @@
-import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 
-class Fc(nn.Module):
 
+class Fc(nn.Module):
     def __init__(self, feature, hidden1, hidden2):
         super(Fc, self).__init__()
         self.fc1 = nn.Linear(feature, hidden1)
