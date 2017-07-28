@@ -8,6 +8,9 @@ from torch.autograd import Variable
 import utils
 import models
 import sys
+from datetime import datetime
+from pycrayon import CrayonClient
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
@@ -19,12 +22,15 @@ parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                     help='learning rate (default: 0.1)')
+parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
+parser.add_argument('--save_dir', default='./data', help='the path to save model files')
+parser.add_argument('--crayon', action='store_true', help='visualization')
 
 opt = parser.parse_args()
 print(opt)
 
 
-def train(model, train_loader, epoch, optimizer, criterion):
+def train(model, train_loader, epoch, optimizer, criterion, tb_train=None):
     model.train()
     criterion.size_average = True
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -40,9 +46,12 @@ def train(model, train_loader, epoch, optimizer, criterion):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
+        if tb_train:
+            tb_train.add_scalar_dict(
+                data={'loss': loss.data[0]},
+                step=epoch)
 
-
-def val(model, val_loader, optimizer, criterion):
+def val(model, val_loader, epoch, optimizer, criterion, tb_valid=None):
     model.eval()
     criterion.size_average = False
     loss = 0
@@ -54,6 +63,10 @@ def val(model, val_loader, optimizer, criterion):
         loss += criterion(output, target)
     loss /= len(val_loader.dataset)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
+    if tb_valid:
+        tb_valid.add_scalar_dict(
+            data={'loss': loss.data[0]},
+            step=epoch)
     return loss
 
 
@@ -74,7 +87,14 @@ def main():
     print('train data: ', len(train_loader.dataset))
     print('val_data', len(val_loader.dataset))
     print('number of features: ', feature_train.size()[1])
-    model = models.Fc(feature_train.size(1), opt.hidden1, opt.hidden2)
+    tb_train, tb_valid = None, None
+    if opt.crayon:
+        tb_client = CrayonClient()
+        tb_name = '{}-{}'.format(datetime.now().strftime("%y%m%d-%H%M%S"),
+                                 opt.save_dir)
+        tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
+        tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
+    model = models.Fc(feature_train.size(1), opt.hidden1, opt.hidden2, opt.dropout)
     criterion = nn.MSELoss()
     if opt.cuda:
         model.cuda()
@@ -83,8 +103,8 @@ def main():
     loss_old, loss = sys.maxint, 0
     for e in range(opt.epoch):
         optimizer = optim.SGD(model.parameters(), lr=lr)
-        train(model, train_loader, e, optimizer, criterion)
-        loss = val(model, val_loader, optimizer, criterion)
+        train(model, train_loader, e, optimizer, criterion, tb_train)
+        loss = val(model, val_loader, e, optimizer, criterion, tb_valid)
         if loss.data[0] > loss_old:
             lr = lr * 0.5
         loss_old = loss.data[0]
