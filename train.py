@@ -23,7 +23,7 @@ parser.add_argument('--hidden2', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                     help='learning rate (default: 0.1)')
 parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
-parser.add_argument('--save_dir', default='./data', help='the path to save model files')
+parser.add_argument('--save', default='./data/model', help='the path to save model files')
 parser.add_argument('--crayon', action='store_true', help='visualization')
 
 opt = parser.parse_args()
@@ -71,7 +71,7 @@ def val(model, val_loader, epoch, optimizer, criterion, tb_valid=None):
     return loss
 
 
-def main():
+def dataLoad():
     feature_train, feature_val = utils.loadFeatures()
     feature_train, feature_val = utils.preprocessFeatures(feature_train, feature_val)
     y_train, y_val = utils.loadUpvote()
@@ -87,7 +87,12 @@ def main():
                             shuffle=True, num_workers=1)
     print('train data: ', len(train_loader.dataset))
     print('val_data', len(val_loader.dataset))
-    print('number of features: ', feature_train.size()[1])
+    print('number of features: ', feature_train.size()[1]) 
+    return train_loader, val_loader, feature_train.size(1)
+
+
+def main():
+    train_loader, val_loader, num_features = dataLoad()
     tb_train, tb_valid = None, None
     if opt.crayon:
         tb_client = CrayonClient()
@@ -95,21 +100,32 @@ def main():
                                  opt.save_dir)
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
-    model = models.Fc(feature_train.size(1), opt.hidden1, opt.hidden2, opt.dropout)
+    model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
     criterion = nn.MSELoss()
     if opt.cuda:
         model.cuda()
         criterion.cuda()
     lr = opt.lr
-    loss_old, loss = sys.maxint, 0
-    for e in range(opt.epoch):
+    loss_old, loss, loss_best = sys.maxint, 0, sys.maxint
+    for e in range(1, opt.epoch + 1):
         optimizer = optim.SGD(model.parameters(), lr=lr)
         train(model, train_loader, e, optimizer, criterion, tb_train)
         loss = val(model, val_loader, e, optimizer, criterion, tb_valid)
-        if loss.data[0] > loss_old:
-            lr = lr * 0.5
-        loss_old = loss.data[0]
         print('LR: \t: {:.6f}'.format(lr))
+        if loss.data[0] < loss_old:
+            if loss.data[0] < loss_best:
+                loss_best = loss.data[0]
+                checkpoint = {
+                    'model': model.state_dict(),
+                    'opt': opt,
+                    'epoch': e,
+                    'optim': optimizer
+                }
+                torch.save(checkpoint,
+                           '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
+            loss_old = loss.data[0]
+        else:
+            lr = lr * 0.5
         print('')
 
 
