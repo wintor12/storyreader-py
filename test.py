@@ -31,10 +31,8 @@ def val(model, val_loader, criterion, tb_valid=None):
     print('Test: \tLoss: {:.6f}'.format(loss.data[0]))
     if tb_valid:
         tb_valid.add_scalar_dict(
-            data={'loss': loss.data[0]},
-            step=epoch)
+            data={'loss': loss.data[0]})
     return loss
-
 
 
 def dataLoad():
@@ -45,10 +43,10 @@ def dataLoad():
     y_test = torch.from_numpy(y_test).float()
     dataset_test = TensorDataset(feature_test, y_test)
     test_loader = DataLoader(dataset_test, batch_size=opt.batchSize,
-                            shuffle=True, num_workers=1)
+                             shuffle=True, num_workers=1)
     print('test_data', len(test_loader.dataset))
     return test_loader, feature_test.size(1)
-    
+
 
 def main():
     test_loader, num_features = dataLoad()
@@ -62,8 +60,8 @@ def main():
     if opt.cuda:
         model.cuda()
     tb_valid = None
-    loss = val(model, test_loader, criterion, tb_valid)
-    
+    val(model, test_loader, criterion, tb_valid)
+
 
 if __name__ == "__main__":
     main()
