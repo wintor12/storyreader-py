@@ -77,12 +77,12 @@ def dataLoad():
     feature_train, feature_val = utils.loadFeatures()
     feature_train, feature_val = utils.preprocessFeatures(feature_train, feature_val)
     y_train, y_val = utils.loadUpvote()
-    feature_train = torch.from_numpy(feature_train).float()
-    feature_val = torch.from_numpy(feature_val).float()
-    y_train = torch.from_numpy(y_train).float()
-    y_val = torch.from_numpy(y_val).float()
-    dataset_train = TensorDataset(feature_train, y_train)
-    dataset_val = TensorDataset(feature_val, y_val)
+    feature_train, feature_val = torch.from_numpy(feature_train).float(),
+    torch.from_numpy(feature_val).float()
+    y_train, y_val = torch.from_numpy(y_train).float(),
+    torch.from_numpy(y_val).float()
+    dataset_train, dataset_val = TensorDataset(feature_train, y_train),
+    TensorDataset(feature_val, y_val)
     train_loader = DataLoader(dataset_train, batch_size=opt.batchSize,
                               shuffle=True, num_workers=1)
     val_loader = DataLoader(dataset_val, batch_size=opt.batchSize,
