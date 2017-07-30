@@ -13,9 +13,17 @@ def preprocessFeatures(feature_train, feature_val):
         (feature_val - train_mean) / train_std
 
 
-def loadFeatures():
-    return np.loadtxt('data/feature_train'), np.loadtxt('data/feature_val')
+def loadFeatures(train=True):
+    if train:
+        return np.loadtxt('data/feature_train'), np.loadtxt('data/feature_val')
+    else:
+        return np.loadtxt('data/feature_train'), np.loadtxt('data/feature_test')
 
 
-def loadUpvote():
-    return np.log(np.loadtxt('data/y_train') + 1), np.log(np.loadtxt('data/y_val') + 1)
+def loadUpvote(train=True):
+    if train:
+        return np.log(np.loadtxt('data/y_train') + 1), np.log(
+            np.loadtxt('data/y_val') + 1)
+    else:
+        return np.log(np.loadtxt('data/y_train') + 1), np.log(
+            np.loadtxt('data/y_test') + 1)

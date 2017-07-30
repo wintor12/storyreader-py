@@ -34,8 +34,9 @@ def train(model, train_loader, epoch, optimizer, criterion, tb_train=None):
     model.train()
     criterion.size_average = True
     for batch_idx, (data, target) in enumerate(train_loader):
+        target = target.float()
         if opt.cuda:
-            data, target = data.cuda(), target.float().cuda()
+            data, target = data.cuda(), target.cuda()
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
@@ -52,13 +53,14 @@ def train(model, train_loader, epoch, optimizer, criterion, tb_train=None):
                 step=epoch)
 
 
-def val(model, val_loader, epoch, optimizer, criterion, tb_valid=None):
+def val(model, val_loader, epoch, criterion, tb_valid=None):
     model.eval()
     criterion.size_average = False
     loss = 0
     for batch_idx, (data, target) in enumerate(val_loader):
+        target = target.float()
         if opt.cuda:
-            data, target = data.cuda(), target.float().cuda()
+            data, target = data.cuda(), target.cuda()
         data, target = Variable(data, volatile=True), Variable(target, volatile=True)
         output = model(data)
         loss += criterion(output, target)
@@ -87,7 +89,7 @@ def dataLoad():
                             shuffle=True, num_workers=1)
     print('train data: ', len(train_loader.dataset))
     print('val_data', len(val_loader.dataset))
-    print('number of features: ', feature_train.size()[1]) 
+    print('number of features: ', feature_train.size()[1])
     return train_loader, val_loader, feature_train.size(1)
 
 
@@ -110,7 +112,7 @@ def main():
     for e in range(1, opt.epoch + 1):
         optimizer = optim.SGD(model.parameters(), lr=lr)
         train(model, train_loader, e, optimizer, criterion, tb_train)
-        loss = val(model, val_loader, e, optimizer, criterion, tb_valid)
+        loss = val(model, val_loader, e, criterion, tb_valid)
         print('LR: \t: {:.6f}'.format(lr))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
