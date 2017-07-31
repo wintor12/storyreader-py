@@ -77,12 +77,12 @@ def dataLoad():
     feature_train, feature_val = utils.loadFeatures()
     feature_train, feature_val = utils.preprocessFeatures(feature_train, feature_val)
     y_train, y_val = utils.loadUpvote()
-    feature_train, feature_val = torch.from_numpy(feature_train).float(),
-    torch.from_numpy(feature_val).float()
-    y_train, y_val = torch.from_numpy(y_train).float(),
-    torch.from_numpy(y_val).float()
-    dataset_train, dataset_val = TensorDataset(feature_train, y_train),
-    TensorDataset(feature_val, y_val)
+    feature_train, feature_val = (torch.from_numpy(feature_train).float(),
+                                  torch.from_numpy(feature_val).float())
+    y_train, y_val = (torch.from_numpy(y_train).float(),
+                      torch.from_numpy(y_val).float())
+    dataset_train, dataset_val = (TensorDataset(feature_train, y_train),
+                                  TensorDataset(feature_val, y_val))
     train_loader = DataLoader(dataset_train, batch_size=opt.batchSize,
                               shuffle=True, num_workers=1)
     val_loader = DataLoader(dataset_val, batch_size=opt.batchSize,
@@ -99,7 +99,7 @@ def main():
     if opt.crayon:
         tb_client = CrayonClient()
         tb_name = '{}-{}'.format(datetime.now().strftime("%y%m%d-%H%M%S"),
-                                 opt.save_dir)
+                                 opt.save)
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
     model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
