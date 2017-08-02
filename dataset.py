@@ -4,7 +4,7 @@ import torchtext.data
 import torchtext.vocab
 
 
-PAD_WORD = "<PAD>"
+PAD_WORD = "<pad>"
 
 
 class StoryDataset(torchtext.data.Dataset):
@@ -24,7 +24,7 @@ class StoryDataset(torchtext.data.Dataset):
                 question = q_line.strip().split()
                 feature = f_line.strip().split()
                 feature = [float(x) for x in feature]
-                tgt = t_line.strip()
+                tgt = float(t_line.strip())
                 d = {'src': src, 'question': question, 'indices': i,
                      'feature': feature, 'tgt': tgt}
                 examples.append(d)
