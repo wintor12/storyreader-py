@@ -46,6 +46,7 @@ class StoryDataset(torchtext.data.Dataset):
         fields = {}
         fields['src'] = torchtext.data.Field(
             pad_token=PAD_WORD,
+            lower=True,
             include_lengths=True)
 
         # question and src text share the same field

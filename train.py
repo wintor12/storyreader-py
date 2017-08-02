@@ -123,10 +123,10 @@ def main():
                 }
                 torch.save(checkpoint,
                            '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
-                loss_old = loss.data[0]
-            else:
-                lr = lr * 0.5
-                print('')
+            loss_old = loss.data[0]
+        else:
+            lr = lr * 0.5
+            print('')
 
 
 if __name__ == "__main__":

@@ -6,13 +6,13 @@ import dill
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_src', default='./data/s_train', help='train story texts')
-parser.add_argument('--train_tgt', default='./data/y_train', help='train upvotes')
-parser.add_argument('--train_feature', default='./data/feature_train',
+parser.add_argument('--train_tgt', default='./data/p_y_train', help='train upvotes')
+parser.add_argument('--train_feature', default='./data/p_feature_train',
                     help='train feature')
 parser.add_argument('--train_question', default='./data/q_train', help='train questions')
 parser.add_argument('--valid_src', default='./data/s_val', help='valid story texts')
-parser.add_argument('--valid_tgt', default='./data/y_val', help='valid upvotes')
-parser.add_argument('--valid_feature', default='./data/feature_val', help='valid feature')
+parser.add_argument('--valid_tgt', default='./data/p_y_val', help='valid upvotes')
+parser.add_argument('--valid_feature', default='./data/p_feature_val', help='valid feature')
 parser.add_argument('--valid_question', default='./data/q_val', help='valid questions')
 parser.add_argument('--save', default='./data/', help='output file for the prepared data')
 
