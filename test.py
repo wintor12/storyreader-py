@@ -1,66 +1,69 @@
 import argparse
 import torch
-import utils
-from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 import models
-from torch.autograd import Variable
+import dill
+from dataset import StoryDataset
+from torchtext.data import BucketIterator
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
-parser.add_argument('--cuda', action='store_true', help='enables cuda')
+parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--model', required=True, help='the path to the saved model')
+parser.add_argument('--src', default='./data/s_test', help='test story texts')
+parser.add_argument('--tgt', default='./data/p_y_test', help='test upvotes')
+parser.add_argument('--feature', default='./data/p_feature_test',
+                    help='test feature')
+parser.add_argument('--question', default='./data/q_test', help='test questions')
+
+parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
+parser.add_argument('--gpu', type=int, default=-1, help='gpu device to run on')
 
 opt = parser.parse_args()
 print(opt)
 
 
-def val(model, val_loader, criterion, tb_valid=None):
+def val(model, validData, criterion, tb_valid=None):
     model.eval()
+    valid = BucketIterator(
+        dataset=validData, batch_size=opt.batch_size,
+        device=opt.gpu if opt.gpu else -1,
+        repeat=False, train=False,
+        sort=False, shuffle=False)
+
     criterion.size_average = False
     loss = 0
-    for batch_idx, (data, target) in enumerate(val_loader):
-        target = target.float()
-        if opt.cuda:
-            data, target = data.cuda(), target.cuda()
-        data, target = Variable(data, volatile=True), Variable(target, volatile=True)
-        output = model(data)
-        loss += criterion(output, target)
-    loss /= len(val_loader.dataset)
-    print('Test: \tLoss: {:.6f}'.format(loss.data[0]))
+    for batch_idx, batch in enumerate(valid):
+        output = model(batch.feature)
+        loss += criterion(output, batch.tgt)
+    loss /= len(validData)
+    print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
     if tb_valid:
         tb_valid.add_scalar_dict(
             data={'loss': loss.data[0]})
     return loss
 
 
-def dataLoad():
-    feature_train, feature_test = utils.loadFeatures(train=False)
-    _, feature_test = utils.preprocessFeatures(feature_train, feature_test)
-    _, y_test = utils.loadUpvote(train=False)
-    feature_test = torch.from_numpy(feature_test).float()
-    y_test = torch.from_numpy(y_test).float()
-    dataset_test = TensorDataset(feature_test, y_test)
-    test_loader = DataLoader(dataset_test, batch_size=opt.batchSize,
-                             shuffle=True, num_workers=1)
-    print('test_data', len(test_loader.dataset))
-    return test_loader, feature_test.size(1)
-
-
 def main():
-    test_loader, num_features = dataLoad()
-    criterion = nn.MSELoss()
+    print("Loading data ... ")
     checkpoint = torch.load(opt.model)
+    fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
+    testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt)
+
     model_opt = checkpoint['opt']
     print(model_opt)
+
+    criterion = nn.MSELoss()
+    num_features = len(testData[0].feature)
     model = models.Fc(num_features, model_opt.hidden1, model_opt.hidden2,
                       model_opt.dropout)
     model.load_state_dict(checkpoint['model'])
-    if opt.cuda:
+    if opt.gpu:
         model.cuda()
+        criterion.cuda()
+
     tb_valid = None
-    val(model, test_loader, criterion, tb_valid)
+    val(model, testData, criterion, tb_valid)
 
 
 if __name__ == "__main__":
