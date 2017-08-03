@@ -19,7 +19,12 @@ class Tenfoldreader:
                 res[i] = string_
             return res
         else:
-            return strarr
+            res = self.returnlistoflist(strlist)
+            ret = []
+            for ele in res:
+                for item in ele:
+                    ret.append(item)
+            return ret
     
     def returnlistoflist(self,strlist):
         # @param string list
