@@ -79,6 +79,7 @@ def val(model, validData, epoch, criterion, tb_valid=None):
 
 def main():
     # load dataset
+    print('Loading data ... ')
     trainData = torch.load(opt.data + 'train.pt', pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
     validData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
@@ -123,10 +124,10 @@ def main():
                 }
                 torch.save(checkpoint,
                            '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
-            loss_old = loss.data[0]
         else:
             lr = lr * 0.5
             print('')
+        loss_old = loss.data[0]
 
 
 if __name__ == "__main__":
