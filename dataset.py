@@ -10,7 +10,7 @@ PAD_WORD = "<pad>"
 class StoryDataset(torchtext.data.Dataset):
 
     def __init__(self, fields, src_path, question_path,
-                 feature_path, tgt_path, opt=None, **kwargs):
+                 feature_path, tgt_path, **kwargs):
         examples = []
         self.src_vocabs = []
         with codecs.open(src_path, 'r', 'utf-8') as src_file, \
@@ -42,10 +42,11 @@ class StoryDataset(torchtext.data.Dataset):
         return -len(ex.src)
 
     @staticmethod
-    def get_fields():
+    def get_fields(opt):
         fields = {}
         fields['src'] = torchtext.data.Field(
             pad_token=PAD_WORD,
+            fix_length=opt.fix_length,
             lower=True,
             include_lengths=True)
 

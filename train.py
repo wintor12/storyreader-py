@@ -22,7 +22,17 @@ parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                     help='learning rate (default: 0.1)')
-parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
+parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
+parser.add_argument('--param_init', type=float, default=0.1,
+                    help="Parameters are initialized over uniform distribution")
+
+parser.add_argument('-word_vec_size', type=int, default=300,
+                    help='Word embedding sizes')
+
+parser.add_argument('--region_nums', type=int, default=10,
+                    help="Number of regions in each text")
+parser.add_argument('--region_words', type=int, default=36,
+                    help="Number of words in each region")
 
 parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--save', default='./data/model', help='the path to save model files')
@@ -42,7 +52,10 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
     criterion.size_average = True
     for batch_idx, batch in enumerate(train):
         optimizer.zero_grad()
-        output = model(batch.feature)
+        model(batch.src[0], batch.question[0])
+        import sys
+        sys.exit()
+
         loss = criterion(output, batch.tgt)
         loss.backward()
         optimizer.step()
@@ -85,7 +98,8 @@ def main():
     validData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
     fields = dict(fields)
     print(list(fields.keys()))
-    print(' * vocabulary size. source = %d *' % len(fields['src'].vocab))
+    vocab = fields['src'].vocab
+    print(' * vocabulary size. source = %d *' % len(vocab))
 
     tb_train, tb_valid = None, None
     if opt.crayon:
@@ -98,8 +112,16 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
+    # model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
+    s_rcnn = models.RegionalCNN(opt, opt.region_nums)
+    q_rcnn = models.RegionalCNN(opt, 1)
+    model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn)
+    print(model)
     criterion = nn.MSELoss()
+
+    print('Intializing params')
+    for p in model.parameters():
+        p.data.uniform_(-opt.param_init, opt.param_init)
 
     if opt.gpus:
         model.cuda()

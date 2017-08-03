@@ -19,6 +19,8 @@ parser.add_argument('--data', default='./data/', help='output file for the prepa
 
 parser.add_argument('--src_vocab_size', type=int, default=20000,
                     help='size of the source vocabulary')
+parser.add_argument('--fix_length', type=int, default=360,
+                    help='fix the length of the story')
 
 opt = parser.parse_args()
 print(opt)
@@ -27,7 +29,7 @@ print(opt)
 def main():
     print('Preprocessing ... ')
 
-    fields = StoryDataset.get_fields()
+    fields = StoryDataset.get_fields(opt)
     train = StoryDataset(fields, opt.data + opt.train_src, opt.data + opt.train_question,
                          opt.data + opt.train_feature, opt.data + opt.train_tgt)
     valid = StoryDataset(fields, opt.data + opt.valid_src, opt.data + opt.valid_question,
