@@ -52,10 +52,7 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
     criterion.size_average = True
     for batch_idx, batch in enumerate(train):
         optimizer.zero_grad()
-        model(batch.src[0], batch.question[0])
-        import sys
-        sys.exit()
-
+        output = model(batch)
         loss = criterion(output, batch.tgt)
         loss.backward()
         optimizer.step()
@@ -79,7 +76,7 @@ def val(model, validData, epoch, criterion, tb_valid=None):
     criterion.size_average = False
     loss = 0
     for batch_idx, batch in enumerate(valid):
-        output = model(batch.feature)
+        output = model(batch)
         loss += criterion(output, batch.tgt)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
@@ -112,10 +109,10 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    # model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
+    fc = models.Fc(num_features + 110, opt)
     s_rcnn = models.RegionalCNN(opt, opt.region_nums)
     q_rcnn = models.RegionalCNN(opt, 1)
-    model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn)
+    model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn, fc)
     print(model)
     criterion = nn.MSELoss()
 
@@ -124,8 +121,8 @@ def main():
         p.data.uniform_(-opt.param_init, opt.param_init)
 
     if opt.gpus:
-        model.cuda()
-        criterion.cuda()
+        model.cuda(opt.gpus[0])
+        criterion.cuda(opt.gpus[0])
 
     lr = opt.lr
     optimizer = optim.SGD(model.parameters(), lr=lr)

@@ -4,12 +4,12 @@ import torch
 
 
 class Fc(nn.Module):
-    def __init__(self, feature, hidden1, hidden2, dropout):
+    def __init__(self, feature, opt):
         super(Fc, self).__init__()
-        self.fc1 = nn.Linear(feature, hidden1)
-        self.fc2 = nn.Linear(hidden1, hidden2)
-        self.fc3 = nn.Linear(hidden2, 1)
-        self.dropout = nn.Dropout(dropout)
+        self.fc1 = nn.Linear(feature, opt.hidden1)
+        self.fc2 = nn.Linear(opt.hidden1, opt.hidden2)
+        self.fc3 = nn.Linear(opt.hidden2, 1)
+        self.dropout = nn.Dropout(opt.dropout)
 
     def forward(self, input):
         x = F.relu(self.fc1(input))
@@ -68,29 +68,30 @@ class RegionalCNN(nn.Module):
 
 class RegionalReader(nn.Module):
 
-    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn):
+    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
         super(RegionalReader, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
         self.s_rcnn = s_rcnn
         self.q_rcnn = q_rcnn
+        self.fc = fc
 
 
-    def forward(self, story, question):
+    def forward(self, batch):
         """
         Args:
         input: src_len x batch
         returns:
         """
         # src_len x batch x emb_size
-        s_embs = self.embed(story)
-        q_embs = self.embed(question[:36])
-        print('q_embs', q_embs.size())
+        s_embs = self.embed(batch.src[0])
+        q_embs = self.embed(batch.question[0][:36])
 
         # use regional cnn to get region embedding
         s_r_emb = self.s_rcnn(s_embs.transpose(0, 1).contiguous()) # batch x regions x 10
-        print(s_r_emb.size())
         q_r_emb = self.q_rcnn(q_embs.transpose(0, 1).contiguous())
-        print('q_r', q_r_emb.size())
-        r_emb = torch.cat([q_r_emb, s_r_emb], 1)
-        print(r_emb.size())
-        return r_emb
+        r_emb = torch.cat([q_r_emb, s_r_emb], 1) # batch x (sregions + qregions) x 10
+        r_emb = r_emb.view(r_emb.size(0), -1)
+        
+        fc_input = torch.cat([r_emb, batch.feature], 1)
+        output = self.fc(fc_input)
+        return output
