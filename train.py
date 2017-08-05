@@ -8,10 +8,11 @@ import models
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
-import utils
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--reader', default=[], required=True,
+                    help='r(Regional Reader)|s(Sequential Reader)|h(Holistic Reader)')
 parser.add_argument('--gpus', default=[], nargs='+', type=int,
                     help='Use CUDA on the listed devices')
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
@@ -28,7 +29,6 @@ parser.add_argument('--dropout', type=float, default=0.5, help='dropout between 
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
 
-# word embeddings
 parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
 parser.add_argument('--pre_word_vec', action='store_true',
@@ -120,7 +120,18 @@ def main():
     s_rcnn = models.RegionalCNN(opt, opt.region_nums)
     q_rcnn = models.RegionalCNN(opt, 1)
     fc = models.Fc(num_features + 110, opt)
-    model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn, fc)
+
+    if opt.reader == 'r':
+        model = models.RegionalReader(len(vocab),
+                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif opt.reader == 's':
+        model = models.SequentialReader(len(vocab),
+                                        opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif opt.reader == 'h':
+        model = models.RegionalReader(len(vocab),
+                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    else:
+        raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
 
     print('Intializing params')
@@ -139,7 +150,7 @@ def main():
 
     criterion = nn.MSELoss()
 
-    if opt.gpus:
+    if len(opt.gpus) > 0:
         model.cuda(opt.gpus[0])
         criterion.cuda(opt.gpus[0])
 
@@ -147,7 +158,7 @@ def main():
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                              lr=lr, momentum=0.9)
+                              lr=lr)
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
         print('LR: \t: {:.6f}'.format(lr))

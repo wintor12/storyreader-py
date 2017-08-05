@@ -31,7 +31,6 @@ parser.add_argument('--word_vec_only', action='store_true',
                     help='Only preprocess word embeddings')
 
 
-
 opt = parser.parse_args()
 print(opt)
 
@@ -47,7 +46,7 @@ def main():
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
-    
+
     if opt.pre_word_vec:
         print('Saving pretrained word vectors ... ')
         wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
