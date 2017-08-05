@@ -100,3 +100,11 @@ class RegionalReader(nn.Module):
         fc_input = torch.cat([r_emb, batch.feature], 1)
         output = self.fc(fc_input)
         return output
+
+class SequentialReader(RegionalReader):
+
+    def __init__(self):
+        super(SequentialReader, self).__init__()
+
+    def forward(self, batch):
+        pass

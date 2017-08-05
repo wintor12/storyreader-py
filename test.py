@@ -34,7 +34,7 @@ def val(model, validData, criterion, tb_valid=None):
     criterion.size_average = False
     loss = 0
     for batch_idx, batch in enumerate(valid):
-        output = model(batch.feature)
+        output = model(batch)
         loss += criterion(output, batch.tgt)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
@@ -55,14 +55,20 @@ def main():
 
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
-    model = models.Fc(num_features, model_opt.hidden1, model_opt.hidden2,
-                      model_opt.dropout)
+
+    s_rcnn = models.RegionalCNN(model_opt, model_opt.region_nums)
+    q_rcnn = models.RegionalCNN(model_opt, 1)
+    fc = models.Fc(num_features + 110, model_opt)
+    model = models.RegionalReader(len(fields['src'].vocab),
+                                  model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+
     model.load_state_dict(checkpoint['model'])
     if opt.gpu:
         model.cuda()
         criterion.cuda()
 
     tb_valid = None
+    print("Computing test loss ... ")
     val(model, testData, criterion, tb_valid)
 
 

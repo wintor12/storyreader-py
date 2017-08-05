@@ -31,8 +31,8 @@ parser.add_argument('--param_init', type=float, default=0.1,
 # word embeddings
 parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
-parser.add_argument('--pre_word_vec', type=str, default='',
-                    help='pre-trained Word embedding path')
+parser.add_argument('--pre_word_vec', action='store_true',
+                    help='Use pre-trained word embeddings')
 parser.add_argument('--fix_word_vec', action='store_true',
                     help='if true, word embeddings are fixed during training')
 
@@ -122,7 +122,6 @@ def main():
     fc = models.Fc(num_features + 110, opt)
     model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn, fc)
     print(model)
-    print(model.parameters())
 
     print('Intializing params')
     for p in model.parameters():
@@ -131,9 +130,8 @@ def main():
     # load pre_trained word vectors
     wv = None
     if opt.pre_word_vec:
-        wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
-                                     vocab, unk_init='random')
-    model.load_pretrained_vectors(wv)
+        wv = torch.load(opt.data + 'wv.pt', pickle_module=dill)
+        model.load_pretrained_vectors(wv)
 
     # fix word embeddings
     if opt.fix_word_vec:
@@ -149,7 +147,7 @@ def main():
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                              lr=lr)
+                              lr=lr, momentum=0.9)
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
         print('LR: \t: {:.6f}'.format(lr))

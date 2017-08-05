@@ -2,6 +2,7 @@ import torch
 import argparse
 from dataset import StoryDataset
 import dill
+import utils
 
 
 parser = argparse.ArgumentParser()
@@ -22,6 +23,15 @@ parser.add_argument('--src_vocab_size', type=int, default=20000,
 parser.add_argument('--fix_length', type=int, default=360,
                     help='fix the length of the story')
 
+parser.add_argument('--word_vec_size', type=int, default=300,
+                    help='Word embedding sizes')
+parser.add_argument('--pre_word_vec', type=str, default='',
+                    help='pre-trained Word embedding path')
+parser.add_argument('--word_vec_only', action='store_true',
+                    help='Only preprocess word embeddings')
+
+
+
 opt = parser.parse_args()
 print(opt)
 
@@ -37,6 +47,14 @@ def main():
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
+    
+    if opt.pre_word_vec:
+        print('Saving pretrained word vectors ... ')
+        wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
+                                     fields['src'].vocab, unk_init='random')
+        torch.save(wv, opt.data + 'wv.pt', pickle_module=dill)
+        if opt.word_vec_only:
+            return
 
     print('Saving train ... ')
     torch.save(train, opt.data + 'train.pt', pickle_module=dill)
