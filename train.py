@@ -8,6 +8,7 @@ import models
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
+import utils
 
 
 parser = argparse.ArgumentParser()
@@ -20,14 +21,21 @@ parser.add_argument('--batch_size', type=int, default=32, help='input batch size
 parser.add_argument('--epoch', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
-parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                    help='learning rate (default: 0.1)')
+
+parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+                    help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
 
-parser.add_argument('-word_vec_size', type=int, default=300,
+# word embeddings
+parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
+parser.add_argument('--pre_word_vec', type=str, default='',
+                    help='pre-trained Word embedding path')
+parser.add_argument('--fix_word_vec', action='store_true',
+                    help='if true, word embeddings are fixed during training')
+
 
 parser.add_argument('--region_nums', type=int, default=10,
                     help="Number of regions in each text")
@@ -109,26 +117,39 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    fc = models.Fc(num_features + 110, opt)
     s_rcnn = models.RegionalCNN(opt, opt.region_nums)
     q_rcnn = models.RegionalCNN(opt, 1)
+    fc = models.Fc(num_features + 110, opt)
     model = models.RegionalReader(len(vocab), opt.word_vec_size, s_rcnn, q_rcnn, fc)
     print(model)
-    criterion = nn.MSELoss()
+    print(model.parameters())
 
     print('Intializing params')
     for p in model.parameters():
         p.data.uniform_(-opt.param_init, opt.param_init)
+
+    # load pre_trained word vectors
+    wv = None
+    if opt.pre_word_vec:
+        wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
+                                     vocab, unk_init='random')
+    model.load_pretrained_vectors(wv)
+
+    # fix word embeddings
+    if opt.fix_word_vec:
+        model.embed.weight.requires_grad = False
+
+    criterion = nn.MSELoss()
 
     if opt.gpus:
         model.cuda(opt.gpus[0])
         criterion.cuda(opt.gpus[0])
 
     lr = opt.lr
-    optimizer = optim.SGD(model.parameters(), lr=lr)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                              lr=lr)
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
         print('LR: \t: {:.6f}'.format(lr))

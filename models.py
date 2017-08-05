@@ -41,7 +41,6 @@ class RegionalCNN(nn.Module):
                                self.conv3_kernel, self.conv3_stride)
         self.dropout = nn.Dropout(self.opt.dropout)
         self.fc = nn.Linear(320, 10)
-        
 
     def forward(self, input):
         batch_size, _, emb_size = input.size()
@@ -75,23 +74,29 @@ class RegionalReader(nn.Module):
         self.q_rcnn = q_rcnn
         self.fc = fc
 
+    def load_pretrained_vectors(self, wv):
+        if wv is not None:
+            self.embed.weight.data.copy_(wv)
 
     def forward(self, batch):
         """
         Args:
-        input: src_len x batch
+          input: batch
         returns:
+          log upvote prediction
         """
         # src_len x batch x emb_size
         s_embs = self.embed(batch.src[0])
         q_embs = self.embed(batch.question[0][:36])
 
         # use regional cnn to get region embedding
-        s_r_emb = self.s_rcnn(s_embs.transpose(0, 1).contiguous()) # batch x regions x 10
+        s_r_emb = self.s_rcnn(s_embs.transpose(0, 1).contiguous())
+        # batch x regions x 10
         q_r_emb = self.q_rcnn(q_embs.transpose(0, 1).contiguous())
-        r_emb = torch.cat([q_r_emb, s_r_emb], 1) # batch x (sregions + qregions) x 10
+        r_emb = torch.cat([q_r_emb, s_r_emb], 1)  # batch x (sregions + qregions) x 10
+        # r_emb = q_r_emb
         r_emb = r_emb.view(r_emb.size(0), -1)
-        
+
         fc_input = torch.cat([r_emb, batch.feature], 1)
         output = self.fc(fc_input)
         return output
