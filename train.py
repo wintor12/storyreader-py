@@ -8,6 +8,7 @@ import models
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
+import torch.optim.lr_scheduler as lr_scheduler
 
 
 parser = argparse.ArgumentParser()
@@ -19,7 +20,7 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=25, help='number of epochs to train for')
+parser.add_argument('--epoch', type=int, default=20, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 
@@ -155,13 +156,15 @@ def main():
         criterion.cuda(opt.gpus[0])
 
     lr = opt.lr
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                          lr=lr)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10, 15], gamma=0.5)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                              lr=lr)
+        scheduler.step()
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
-        print('LR: \t: {:.6f}'.format(lr))
+        print('LR: \t: {:.6f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
                 loss_best = loss.data[0]
@@ -173,9 +176,9 @@ def main():
                 }
                 torch.save(checkpoint,
                            '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
-        else:
-            lr = lr * 0.5
-            print('')
+        # else:
+        #     lr = lr * 0.5
+        #     print('')
         loss_old = loss.data[0]
 
 

@@ -61,6 +61,18 @@ def main():
     fc = models.Fc(num_features + 110, model_opt)
     model = models.RegionalReader(len(fields['src'].vocab),
                                   model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    if model_opt.reader == 'r':
+        model = models.RegionalReader(len(fields['src'].vocab),
+                                      model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif model_opt.reader == 's':
+        model = models.SequentialReader(len(fields['src'].vocab),
+                                        model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif model_opt.reader == 'h':
+        model = models.RegionalReader(len(fields['src'].vocab),
+                                      model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    else:
+        raise Exception('reader has to be "r" or "s" or "h"')
+    print(model)
 
     model.load_state_dict(checkpoint['model'])
     if opt.gpu:
