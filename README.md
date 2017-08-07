@@ -14,11 +14,12 @@ python preprocess.py --pre_word_vec WORD_VEC_PATH
 ```
 
 ## Step 3: Train
+if preprocessed pre_word_vec:
 ```bash
 python train.py --pre_word_vec --gpus 0
 ```
 
 ## Step 4: Test
 ```bash
-python test.py --model MODEL PATH
+python test.py --model MODEL_PATH
 ```
