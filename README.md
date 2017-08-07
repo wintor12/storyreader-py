@@ -15,7 +15,7 @@ python preprocess.py --pre_word_vec WORD_VEC_PATH
 
 ## Step 3: Train
 ```bash
-python train.py --pre_word_vec (if you preprocessed wordvec) --gpus 0
+python train.py --pre_word_vec --gpus 0
 ```
 
 ## Step 4: Test
