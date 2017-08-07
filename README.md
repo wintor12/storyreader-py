@@ -1,5 +1,10 @@
 Code for paper "predicting the quality of short narratives from social media" https://www.ijcai.org/proceedings/2017/0539.pdf
 
+## Requirements:
+install pytorch http://pytorch.org/
+
+pip install --upgrade dill six tqdm git+git://github.com/pytorch/text.git
+
 ## Quickstart
 
 ## Step 1: Prepare the data
