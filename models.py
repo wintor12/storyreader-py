@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from torch.autograd import Variable
+import dataset
 
 
 class Fc(nn.Module):
@@ -66,9 +67,10 @@ class RegionalCNN(nn.Module):
 
 class RegionalReader(nn.Module):
 
-    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
+    def __init__(self, vocab, embed_size, s_rcnn, q_rcnn, fc):
         super(RegionalReader, self).__init__()
-        self.embed = nn.Embedding(vocab_size, embed_size)
+        self.embed = nn.Embedding(len(vocab), embed_size,
+                                  padding_idx=vocab.stoi[dataset.PAD_WORD])
         self.s_rcnn = s_rcnn
         self.q_rcnn = q_rcnn
         self.r_fc = nn.Linear(320, 10)
@@ -111,8 +113,8 @@ class RegionalReader(nn.Module):
 
 
 class SequentialReader(RegionalReader):
-    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
-        super(SequentialReader, self).__init__(vocab_size,
+    def __init__(self, vocab, embed_size, s_rcnn, q_rcnn, fc):
+        super(SequentialReader, self).__init__(vocab,
                                                embed_size, s_rcnn, q_rcnn, fc)
         self.rnn_cell = nn.LSTMCell(320, 10)
         self.h_fc = nn.Linear(10, 10)
@@ -155,8 +157,8 @@ class SequentialReader(RegionalReader):
 
 
 class HolisticReader(RegionalReader):
-    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
-        super(HolisticReader, self).__init__(vocab_size,
+    def __init__(self, vocab, embed_size, s_rcnn, q_rcnn, fc):
+        super(HolisticReader, self).__init__(vocab,
                                              embed_size, s_rcnn, q_rcnn, fc)
         self.rnn = nn.LSTM(320, 10, batch_first=True)
         self.h_fc = nn.Linear(10, 10)

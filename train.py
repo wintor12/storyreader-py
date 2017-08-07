@@ -12,7 +12,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--reader', default=[], required=True,
+parser.add_argument('--reader', type=str, default='r',
                     help='r(Regional Reader)|s(Sequential Reader)|h(Holistic Reader)')
 parser.add_argument('--gpus', default=[], nargs='+', type=int,
                     help='Use CUDA on the listed devices')
@@ -123,13 +123,13 @@ def main():
     fc = models.Fc(num_features + 110, opt)
 
     if opt.reader == 'r':
-        model = models.RegionalReader(len(vocab),
+        model = models.RegionalReader(vocab,
                                       opt.word_vec_size, s_rcnn, q_rcnn, fc)
     elif opt.reader == 's':
-        model = models.SequentialReader(len(vocab),
+        model = models.SequentialReader(vocab,
                                         opt.word_vec_size, s_rcnn, q_rcnn, fc)
     elif opt.reader == 'h':
-        model = models.HolisticReader(len(vocab),
+        model = models.HolisticReader(vocab,
                                       opt.word_vec_size, s_rcnn, q_rcnn, fc)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
@@ -158,7 +158,7 @@ def main():
     lr = opt.lr
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
                           lr=lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10, 15], gamma=0.5)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         scheduler.step()
