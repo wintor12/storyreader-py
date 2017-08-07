@@ -114,7 +114,7 @@ class SequentialReader(RegionalReader):
     def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
         super(SequentialReader, self).__init__(vocab_size,
                                                embed_size, s_rcnn, q_rcnn, fc)
-        self.rnn = nn.LSTMCell(320, 10)
+        self.rnn_cell = nn.LSTMCell(320, 10)
         self.h_fc = nn.Linear(10, 10)
 
     def forward(self, batch):
@@ -143,11 +143,59 @@ class SequentialReader(RegionalReader):
         outputs = []
         for emb_t in r_emb.split(1, dim=1):
             emb_t = emb_t.squeeze(1)
-            h, c = self.rnn(emb_t, (h, c))
+            h, c = self.rnn_cell(emb_t, (h, c))
             h = F.sigmoid(self.r_fc(emb_t) + self.h_fc(h))
             outputs.append(h)
         r_emb = torch.stack(outputs, 1)
 
+        r_emb = r_emb.view(r_emb.size(0), -1)
+        fc_input = torch.cat([r_emb, batch.feature], 1)
+        output = self.fc(fc_input)
+        return output
+
+
+class HolisticReader(RegionalReader):
+    def __init__(self, vocab_size, embed_size, s_rcnn, q_rcnn, fc):
+        super(HolisticReader, self).__init__(vocab_size,
+                                             embed_size, s_rcnn, q_rcnn, fc)
+        self.rnn = nn.LSTM(320, 10, batch_first=True)
+        self.h_fc = nn.Linear(10, 10)
+
+    def forward(self, batch):
+        """
+        Args:
+          input: batch
+        returns:
+          log upvote prediction
+        """
+        # src_len x batch x emb_size
+        s_embs = self.embed(batch.src[0])
+        q_embs = self.embed(batch.question[0][:36])
+
+        # use regional cnn to get region embedding
+        s_r_emb = self.s_rcnn(s_embs.transpose(0, 1).contiguous())
+        # batch x regions x 320
+        q_r_emb = self.q_rcnn(q_embs.transpose(0, 1).contiguous())
+        r_emb = torch.cat([q_r_emb, s_r_emb], 1)
+        # batch x (sregions + qregions) x 320
+
+        batch_size = r_emb.size(0)
+        weight = next(self.parameters()).data
+        h, c = (Variable(weight.new(1, batch_size, 10).normal_(0, 1)),
+                Variable(weight.new(1, batch_size, 10).normal_(0, 1)))
+
+        r_ouput = self.rnn(r_emb, (h, c))
+        print(r_ouput[0].size())
+        weight = next(self.parameters()).data
+        W = Variable(weight.new(r_emb.size(1), r_emb.size(1)).uniform_(-1, 1),
+                     requires_grad=True)
+        # W = Variable(W.unsqueeze(-1).expand_as(r_emb))
+        print(W)
+        print(W.requires_grad)
+        U = Variable(weight.new(1, batch_size, 10))
+
+        import sys
+        sys.exit()
         r_emb = r_emb.view(r_emb.size(0), -1)
         fc_input = torch.cat([r_emb, batch.feature], 1)
         output = self.fc(fc_input)

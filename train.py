@@ -129,7 +129,7 @@ def main():
         model = models.SequentialReader(len(vocab),
                                         opt.word_vec_size, s_rcnn, q_rcnn, fc)
     elif opt.reader == 'h':
-        model = models.RegionalReader(len(vocab),
+        model = models.HolisticReader(len(vocab),
                                       opt.word_vec_size, s_rcnn, q_rcnn, fc)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
