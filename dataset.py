@@ -22,12 +22,12 @@ class StoryDataset(torchtext.data.Dataset):
             if len(src_list) < opt.fix_length:
                 for c in chunked_src:
                     num_pad = opt.fix_length / 10 - len(c)
-                    temp = c.tolist()
-                    temp1 = [PAD_WORD] * int(num_pad / 2)
-                    temp2 = [PAD_WORD] * int(num_pad - len(temp1))
-                    processed_src.append(temp1)
-                    processed_src.append(temp)
-                    processed_src.append(temp2)
+                    c = c.tolist()
+                    leading_pads = [PAD_WORD] * int(num_pad / 2)
+                    trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
+                    processed_src.append(leading_pads)
+                    processed_src.append(c)
+                    processed_src.append(trailing_pads)
             else:
                 for c in chunked_src:
                     start = int((len(c) - opt.fix_length / 10) / 2)
