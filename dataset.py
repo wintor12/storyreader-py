@@ -11,38 +11,39 @@ PAD_WORD = "<pad>"
 
 class StoryDataset(torchtext.data.Dataset):
 
-    def __init__(self, opt, **kwargs):
+    def __init__(self, fields, src_path, question_path,
+                 feature_path, tgt_path, fix_length_src, **kwargs):
 
         def src_preprocessing(src_list):
             # remove stopwords
             stops = set(stopwords.words("english"))
             src_list = [word for word in src_list if word not in stops]
             
-            if len(src_list) == opt.fix_length:
+            if len(src_list) == fix_length_src:
                 return src_list
 
             processed_src = []
             chunked_src = np.array_split(np.array(src_list), 10)
-            if len(src_list) < opt.fix_length:
+            if len(src_list) < fix_length_src:
                 for c in chunked_src:
-                    num_pad = opt.fix_length / 10 - len(c)
+                    num_pad = fix_length_src / 10 - len(c)
                     c = c.tolist()
                     leading_pads = [PAD_WORD] * int(num_pad / 2)
                     trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
                     processed_src = leading_pads + c + trailing_pads
             else:
                 for c in chunked_src:
-                    start = int((len(c) - opt.fix_length / 10) / 2)
-                    temp = c[start:int(start + opt.fix_length / 10)].tolist()
+                    start = int((len(c) - fix_length_src / 10) / 2)
+                    temp = c[start:int(start + fix_length_src / 10)].tolist()
                     processed_src += temp
             return processed_src
 
         examples = []
         self.src_vocabs = []
-        with codecs.open(opt.data + opt.src_path, 'r', 'utf-8') as src_file, \
-             codecs.open(opt.data + opt.question_path, 'r', 'utf-8') as q_file, \
-             codecs.open(opt.data + opt.feature_path, 'r', 'utf-8') as f_file, \
-             codecs.open(opt.data + opt.tgt_path, 'r', 'utf-8') as t_file:
+        with codecs.open(src_path, 'r', 'utf-8') as src_file, \
+             codecs.open(question_path, 'r', 'utf-8') as q_file, \
+             codecs.open(feature_path, 'r', 'utf-8') as f_file, \
+             codecs.open(tgt_path, 'r', 'utf-8') as t_file:
             for i, (src_line, q_line, f_line, t_line) in enumerate(
                     zip(src_file, q_file, f_file, t_file)):
 
