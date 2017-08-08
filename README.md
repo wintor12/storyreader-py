@@ -3,7 +3,17 @@ Code for paper "predicting the quality of short narratives from social media" ht
 ## Requirements:
 install pytorch http://pytorch.org/
 
-pip install --upgrade dill six tqdm git+git://github.com/pytorch/text.git
+pip install --upgrade dill six tqdm
+
+git clone https://github.com/pytorch/text.git
+
+cd text
+
+python setup.py install
+
+(optional) pip install --upgrade pycrayon
+
+
 
 ## Quickstart
 
