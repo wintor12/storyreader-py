@@ -18,7 +18,7 @@ class StoryDataset(torchtext.data.Dataset):
             # remove stopwords
             stops = set(stopwords.words("english"))
             src_list = [word for word in src_list if word not in stops]
-            
+
             if len(src_list) == opt.fix_length:
                 return src_list
 
