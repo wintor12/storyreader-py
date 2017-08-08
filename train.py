@@ -22,13 +22,16 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 
 parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=60, help='number of epochs to train for')
+parser.add_argument('--epoch', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 
-parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                     help='learning rate')
-parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
+parser.add_argument('--optim', default='adam',
+                    help="""Optimization method.
+                    [sgd|adam]""")
+parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
 
@@ -169,15 +172,19 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    lr = opt.lr
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                          lr=lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
+    if opt.optim == 'sgd':
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                              lr=opt.lr)
+    elif opt.optim == 'adam':
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                               lr=opt.lr)
+    # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.1)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
-        scheduler.step()
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
+        scheduler.step(loss.data[0])
         print('LR: \t: {:.6f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
