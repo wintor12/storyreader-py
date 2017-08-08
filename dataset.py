@@ -19,7 +19,7 @@ class StoryDataset(torchtext.data.Dataset):
             stops = set(stopwords.words("english"))
             src_list = [word for word in src_list if word not in stops]
 
-            if len(src_list) == opt.fix_length:
+            if len(src_list) == fix_length_src:
                 return src_list
 
             processed_src = []
