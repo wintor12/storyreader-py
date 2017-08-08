@@ -25,15 +25,12 @@ class StoryDataset(torchtext.data.Dataset):
                     c = c.tolist()
                     leading_pads = [PAD_WORD] * int(num_pad / 2)
                     trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
-                    processed_src.append(leading_pads)
-                    processed_src.append(c)
-                    processed_src.append(trailing_pads)
+                    processed_src = leading_pads + c + trailing_pads
             else:
                 for c in chunked_src:
                     start = int((len(c) - opt.fix_length / 10) / 2)
                     temp = c[start:int(start + opt.fix_length / 10)].tolist()
-                    processed_src.append(temp)
-            processed_src = [item for sublist in processed_src for item in sublist]
+                    processed_src += temp
             return processed_src
 
         examples = []
