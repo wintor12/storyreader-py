@@ -23,6 +23,10 @@ opt = parser.parse_args()
 print(opt)
 
 
+if opt.gpu >= 0:
+    torch.cuda.set_device(opt.gpu)
+
+
 def val(model, validData, criterion, tb_valid=None):
     model.eval()
     valid = BucketIterator(
@@ -66,14 +70,14 @@ def main():
         model = models.SequentialReader(fields['src'].vocab,
                                         model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
     elif model_opt.reader == 'h':
-        model = models.RegionalReader(fields['src'].vocab,
+        model = models.HolisticReader(fields['src'].vocab,
                                       model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
 
     model.load_state_dict(checkpoint['model'])
-    if opt.gpu:
+    if opt.gpu >= 0:
         model.cuda()
         criterion.cuda()
 
