@@ -18,6 +18,9 @@ parser.add_argument('--question', default='./data/q_test', help='test questions'
 
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--gpu', type=int, default=-1, help='gpu device to run on')
+parser.add_argument('--fix_length', type=int, default=360,
+                    help='fix the length of the story')
+
 
 opt = parser.parse_args()
 print(opt)
@@ -31,7 +34,7 @@ def val(model, validData, criterion, tb_valid=None):
     model.eval()
     valid = BucketIterator(
         dataset=validData, batch_size=opt.batch_size,
-        device=opt.gpu if opt.gpu else -1,
+        device=opt.gpu,
         repeat=False, train=False,
         sort=False, shuffle=False)
 
@@ -52,11 +55,11 @@ def main():
     print("Loading data ... ")
     checkpoint = torch.load(opt.model, pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
-    testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt)
 
     model_opt = checkpoint['opt']
     print(model_opt)
 
+    testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt, opt)
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
