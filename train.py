@@ -9,6 +9,7 @@ import dill
 from datetime import datetime
 from pycrayon import CrayonClient
 import torch.optim.lr_scheduler as lr_scheduler
+import os
 
 
 parser = argparse.ArgumentParser()
@@ -19,14 +20,15 @@ parser.add_argument('--gpus', default=[], nargs='+', type=int,
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
+parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=20, help='number of epochs to train for')
+parser.add_argument('--epoch', type=int, default=60, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate')
-parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
+parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
 
@@ -44,11 +46,23 @@ parser.add_argument('--region_words', type=int, default=36,
                     help="Number of words in each region")
 
 parser.add_argument('--data', default='./data/', help='the path to load data')
-parser.add_argument('--save', default='./data/model', help='the path to save model files')
+parser.add_argument('--save', default='./data/model/',
+                    help='the path to save model files')
 parser.add_argument('--crayon', action='store_true', help='visualization')
 
 opt = parser.parse_args()
 print(opt)
+
+if not os.path.exists(opt.save):
+    os.makedirs(opt.save)
+
+if torch.cuda.is_available() and not opt.gpus:
+    print("WARNING: You have a CUDA device, should run with -gpus 0")
+
+if opt.gpus:
+    torch.cuda.set_device(opt.gpus[0])
+    if opt.seed > 0:
+        torch.cuda.manual_seed(opt.seed)
 
 
 def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
@@ -152,8 +166,8 @@ def main():
     criterion = nn.MSELoss()
 
     if len(opt.gpus) > 0:
-        model.cuda(opt.gpus[0])
-        criterion.cuda(opt.gpus[0])
+        model.cuda()
+        criterion.cuda()
 
     lr = opt.lr
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
@@ -174,11 +188,9 @@ def main():
                     'epoch': e,
                     'optim': optimizer
                 }
-                torch.save(checkpoint,
-                           '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
-        # else:
-        #     lr = lr * 0.5
-        #     print('')
+                filename = 'e%d_%.5f' % (e, loss_best)
+                torch.save(checkpoint, os.path.join(opt.save, filename),
+                           pickle_module=dill)
         loss_old = loss.data[0]
 
 

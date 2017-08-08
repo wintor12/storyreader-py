@@ -46,7 +46,7 @@ def val(model, validData, criterion, tb_valid=None):
 
 def main():
     print("Loading data ... ")
-    checkpoint = torch.load(opt.model)
+    checkpoint = torch.load(opt.model, pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
     testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt)
 
