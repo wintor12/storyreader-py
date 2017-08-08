@@ -10,8 +10,8 @@ from torchtext.data import BucketIterator
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--model', required=True, help='the path to the saved model')
-parser.add_argument('--src', default='./data/s_test', help='test story texts')
-parser.add_argument('--tgt', default='./data/p_y_test', help='test upvotes')
+parser.add_argument('--src', default='s_test', help='test story texts')
+parser.add_argument('--tgt', default='p_y_test', help='test upvotes')
 parser.add_argument('--feature', default='./data/p_feature_test',
                     help='test feature')
 parser.add_argument('--question', default='./data/q_test', help='test questions')
@@ -59,7 +59,7 @@ def main():
     model_opt = checkpoint['opt']
     print(model_opt)
 
-    testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt, opt)
+    testData = StoryDataset(fields, opt)
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
