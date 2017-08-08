@@ -28,6 +28,9 @@ parser.add_argument('--hidden2', type=int, default=128)
 
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate')
+parser.add_argument('--optim', default='adam',
+                    help="""Optimization method.
+                    [sgd|adam]""")
 parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
@@ -169,9 +172,12 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    lr = opt.lr
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                          lr=lr)
+    if opt.optim == 'sgd':
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                              lr=opt.lr)
+    elif opt.optim == 'adam':
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                               lr = opt.lr)
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
