@@ -8,28 +8,61 @@ import models
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
+import torch.optim.lr_scheduler as lr_scheduler
+import os
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--reader', type=str, default='r',
+                    help='r(Regional Reader)|s(Sequential Reader)|h(Holistic Reader)')
 parser.add_argument('--gpus', default=[], nargs='+', type=int,
                     help='Use CUDA on the listed devices')
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
+parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=25, help='number of epochs to train for')
+parser.add_argument('--epoch', type=int, default=60, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
-parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                    help='learning rate (default: 0.1)')
+
+parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+                    help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.3, help='dropout between layers')
+parser.add_argument('--param_init', type=float, default=0.1,
+                    help="Parameters are initialized over uniform distribution")
+
+parser.add_argument('--word_vec_size', type=int, default=300,
+                    help='Word embedding sizes')
+parser.add_argument('--pre_word_vec', action='store_true',
+                    help='Use pre-trained word embeddings')
+parser.add_argument('--fix_word_vec', action='store_true',
+                    help='if true, word embeddings are fixed during training')
+
+
+parser.add_argument('--region_nums', type=int, default=10,
+                    help="Number of regions in each text")
+parser.add_argument('--region_words', type=int, default=36,
+                    help="Number of words in each region")
 
 parser.add_argument('--data', default='./data/', help='the path to load data')
-parser.add_argument('--save', default='./data/model', help='the path to save model files')
+parser.add_argument('--save', default='./data/model/',
+                    help='the path to save model files')
 parser.add_argument('--crayon', action='store_true', help='visualization')
 
 opt = parser.parse_args()
 print(opt)
+
+if not os.path.exists(opt.save):
+    os.makedirs(opt.save)
+
+if torch.cuda.is_available() and not opt.gpus:
+    print("WARNING: You have a CUDA device, should run with -gpus 0")
+
+if opt.gpus:
+    torch.cuda.set_device(opt.gpus[0])
+    if opt.seed > 0:
+        torch.cuda.manual_seed(opt.seed)
 
 
 def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
@@ -42,7 +75,7 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
     criterion.size_average = True
     for batch_idx, batch in enumerate(train):
         optimizer.zero_grad()
-        output = model(batch.feature)
+        output = model(batch)
         loss = criterion(output, batch.tgt)
         loss.backward()
         optimizer.step()
@@ -66,7 +99,7 @@ def val(model, validData, epoch, criterion, tb_valid=None):
     criterion.size_average = False
     loss = 0
     for batch_idx, batch in enumerate(valid):
-        output = model(batch.feature)
+        output = model(batch)
         loss += criterion(output, batch.tgt)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
@@ -85,7 +118,8 @@ def main():
     validData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
     fields = dict(fields)
     print(list(fields.keys()))
-    print(' * vocabulary size. source = %d *' % len(fields['src'].vocab))
+    vocab = fields['src'].vocab
+    print(' * vocabulary size. source = %d *' % len(vocab))
 
     tb_train, tb_valid = None, None
     if opt.crayon:
@@ -98,21 +132,53 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    model = models.Fc(num_features, opt.hidden1, opt.hidden2, opt.dropout)
+    s_rcnn = models.RegionalCNN(opt, opt.region_nums)
+    q_rcnn = models.RegionalCNN(opt, 1)
+    fc = models.Fc(num_features + 110, opt)
+
+    if opt.reader == 'r':
+        model = models.RegionalReader(vocab,
+                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif opt.reader == 's':
+        model = models.SequentialReader(vocab,
+                                        opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    elif opt.reader == 'h':
+        model = models.HolisticReader(vocab,
+                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+    else:
+        raise Exception('reader has to be "r" or "s" or "h"')
+    print(model)
+
+    print('Intializing params')
+    for p in model.parameters():
+        p.data.uniform_(-opt.param_init, opt.param_init)
+
+    # load pre_trained word vectors
+    wv = None
+    if opt.pre_word_vec:
+        wv = torch.load(opt.data + 'wv.pt', pickle_module=dill)
+        model.load_pretrained_vectors(wv)
+
+    # fix word embeddings
+    if opt.fix_word_vec:
+        model.embed.weight.requires_grad = False
+
     criterion = nn.MSELoss()
 
-    if opt.gpus:
+    if len(opt.gpus) > 0:
         model.cuda()
         criterion.cuda()
 
     lr = opt.lr
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                          lr=lr)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+        scheduler.step()
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
-        print('LR: \t: {:.6f}'.format(lr))
+        print('LR: \t: {:.6f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
                 loss_best = loss.data[0]
@@ -122,11 +188,9 @@ def main():
                     'epoch': e,
                     'optim': optimizer
                 }
-                torch.save(checkpoint,
-                           '%s_loss_%.5f_e%d.pt' % (opt.save, loss_best, e))
-        else:
-            lr = lr * 0.5
-            print('')
+                filename = 'e%d_%.5f' % (e, loss_best)
+                torch.save(checkpoint, os.path.join(opt.save, filename),
+                           pickle_module=dill)
         loss_old = loss.data[0]
 
 
