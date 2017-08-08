@@ -40,9 +40,9 @@ def main():
 
     fields = StoryDataset.get_fields(opt)
     train = StoryDataset(fields, opt.data + opt.train_src, opt.data + opt.train_question,
-                         opt.data + opt.train_feature, opt.data + opt.train_tgt, opt)
+                         opt.data + opt.train_feature, opt.data + opt.train_tgt, opt.fix_length)
     valid = StoryDataset(fields, opt.data + opt.valid_src, opt.data + opt.valid_question,
-                         opt.data + opt.valid_feature, opt.data + opt.valid_tgt, opt)
+                         opt.data + opt.valid_feature, opt.data + opt.valid_tgt, opt.fix_length)
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)

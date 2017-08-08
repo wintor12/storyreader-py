@@ -12,7 +12,7 @@ PAD_WORD = "<pad>"
 class StoryDataset(torchtext.data.Dataset):
 
     def __init__(self, fields, src_path, question_path,
-                 feature_path, tgt_path, opt, **kwargs):
+                 feature_path, tgt_path, fix_length_src, **kwargs):
 
         def src_preprocessing(src_list):
             # remove stopwords
@@ -24,17 +24,17 @@ class StoryDataset(torchtext.data.Dataset):
 
             processed_src = []
             chunked_src = np.array_split(np.array(src_list), 10)
-            if len(src_list) < opt.fix_length:
+            if len(src_list) < fix_length_src:
                 for c in chunked_src:
-                    num_pad = opt.fix_length / 10 - len(c)
+                    num_pad = fix_length_src / 10 - len(c)
                     c = c.tolist()
                     leading_pads = [PAD_WORD] * int(num_pad / 2)
                     trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
                     processed_src = leading_pads + c + trailing_pads
             else:
                 for c in chunked_src:
-                    start = int((len(c) - opt.fix_length / 10) / 2)
-                    temp = c[start:int(start + opt.fix_length / 10)].tolist()
+                    start = int((len(c) - fix_length_src / 10) / 2)
+                    temp = c[start:int(start + fix_length_src / 10)].tolist()
                     processed_src += temp
             return processed_src
 
