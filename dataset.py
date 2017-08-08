@@ -11,8 +11,7 @@ PAD_WORD = "<pad>"
 
 class StoryDataset(torchtext.data.Dataset):
 
-    def __init__(self, fields, src_path, question_path,
-                 feature_path, tgt_path, opt, **kwargs):
+    def __init__(self, opt, **kwargs):
 
         def src_preprocessing(src_list):
             # remove stopwords
@@ -40,10 +39,10 @@ class StoryDataset(torchtext.data.Dataset):
 
         examples = []
         self.src_vocabs = []
-        with codecs.open(src_path, 'r', 'utf-8') as src_file, \
-             codecs.open(question_path, 'r', 'utf-8') as q_file, \
-             codecs.open(feature_path, 'r', 'utf-8') as f_file, \
-             codecs.open(tgt_path, 'r', 'utf-8') as t_file:
+        with codecs.open(opt.data + opt.src_path, 'r', 'utf-8') as src_file, \
+             codecs.open(opt.data + opt.question_path, 'r', 'utf-8') as q_file, \
+             codecs.open(opt.data + opt.feature_path, 'r', 'utf-8') as f_file, \
+             codecs.open(opt.data + opt.tgt_path, 'r', 'utf-8') as t_file:
             for i, (src_line, q_line, f_line, t_line) in enumerate(
                     zip(src_file, q_file, f_file, t_file)):
 

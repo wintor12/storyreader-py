@@ -39,10 +39,8 @@ def main():
     print('Preprocessing ... ')
 
     fields = StoryDataset.get_fields(opt)
-    train = StoryDataset(fields, opt.data + opt.train_src, opt.data + opt.train_question,
-                         opt.data + opt.train_feature, opt.data + opt.train_tgt, opt)
-    valid = StoryDataset(fields, opt.data + opt.valid_src, opt.data + opt.valid_question,
-                         opt.data + opt.valid_feature, opt.data + opt.valid_tgt, opt)
+    train = StoryDataset(fields, opt)
+    valid = StoryDataset(fields, opt)
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
