@@ -3,6 +3,7 @@ import codecs
 import torchtext.data
 import torchtext.vocab
 import numpy as np
+from nltk.corpus import stopwords
 
 
 PAD_WORD = "<pad>"
@@ -14,6 +15,10 @@ class StoryDataset(torchtext.data.Dataset):
                  feature_path, tgt_path, opt, **kwargs):
 
         def src_preprocessing(src_list):
+            # remove stopwords
+            stops = set(stopwords.words("english"))
+            src_list = [word for word in src_list if word not in stops]
+            
             if len(src_list) == opt.fix_length:
                 return src_list
 
