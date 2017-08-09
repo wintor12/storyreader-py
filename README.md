@@ -5,6 +5,8 @@ install pytorch http://pytorch.org/
 
 pip install --upgrade dill six tqdm
 
+pip install --upgrade nltk
+
 git clone https://github.com/pytorch/text.git
 
 cd text
