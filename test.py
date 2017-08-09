@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import models
 import dill
-from dataset import StoryDataset
 from torchtext.data import BucketIterator
 
 

@@ -128,21 +128,18 @@ def main():
     trainData = torch.load(opt.data + 'train.pt', pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
     validData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
-    if opt.debug:
-        testData = torch.load(opt.data + 'test.pt', pickle_module=dill)
     fields = dict(fields)
     print(list(fields.keys()))
     vocab = fields['src'].vocab
     print(' * vocabulary size. source = %d *' % len(vocab))
 
-    tb_train, tb_valid, tb_test = None, None, None
+    tb_train, tb_valid = None, None
     if opt.crayon:
         tb_client = CrayonClient()
         tb_name = '{}-{}'.format(datetime.now().strftime("%y%m%d-%H%M%S"),
                                  opt.save)
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
-        tb_test = tb_client.create_experiment('{}/test'.format(tb_name))
 
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))

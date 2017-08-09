@@ -54,9 +54,9 @@ def main():
                          opt.data + opt.valid_feature,
                          opt.data + opt.valid_tgt, opt.fix_length)
     test = StoryDataset(fields, opt.data + opt.test_src,
-                         opt.data + opt.test_question,
-                         opt.data + opt.test_feature,
-                         opt.data + opt.test_tgt, opt.fix_length)
+                        opt.data + opt.test_question,
+                        opt.data + opt.test_feature,
+                        opt.data + opt.test_tgt, opt.fix_length)
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
