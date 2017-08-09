@@ -59,6 +59,8 @@ parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--save', default='./data/model/',
                     help='the path to save model files')
 parser.add_argument('--crayon', action='store_true', help='visualization')
+parser.add_argument('--debug', action='store_true', help='debug the model')
+
 
 opt = parser.parse_args()
 print(opt)
@@ -147,14 +149,14 @@ def main():
     fc = models.Fc(num_features + 110, opt)
 
     if opt.reader == 'r':
-        model = models.RegionalReader(vocab,
-                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.RegionalReader(vocab, opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc)
     elif opt.reader == 's':
-        model = models.SequentialReader(vocab,
-                                        opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.SequentialReader(vocab, opt.word_vec_size,
+                                        s_rcnn, q_rcnn, fc)
     elif opt.reader == 'h':
-        model = models.HolisticReader(vocab,
-                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.HolisticReader(vocab, opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
