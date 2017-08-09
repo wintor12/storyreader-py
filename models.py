@@ -133,8 +133,8 @@ class SequentialReader(RegionalReader):
         for emb_t in r_emb.split(1, dim=1):
             emb_t = emb_t.squeeze(1)
             h, c = self.rnn_cell(emb_t, (h, c))
-            h = F.sigmoid(self.r_w(emb_t) + self.h_w(h))
-            outputs.append(h)
+            gate = F.sigmoid(self.r_w(emb_t) + self.h_w(h))
+            outputs.append(torch.mul(h, gate))
         r_emb = torch.stack(outputs, 1)
 
         r_emb = r_emb.view(r_emb.size(0), -1)

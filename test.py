@@ -36,7 +36,7 @@ def val(model, validData, criterion, tb_valid=None):
         dataset=validData, batch_size=opt.batch_size,
         device=opt.gpu,
         repeat=False, train=False,
-        sort=False, shuffle=False)
+        sort=True)
 
     criterion.size_average = False
     loss = 0

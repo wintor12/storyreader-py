@@ -26,11 +26,18 @@ parser.add_argument('--epoch', type=int, default=50, help='number of epochs to t
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 
-parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
+# optimizer
+parser.add_argument('--lr', type=float, default=0.00015, metavar='LR',
                     help='learning rate')
+parser.add_argument('--decay_factor', type=float, default=0.1,
+                    help='factor by which the learning rate will be reduced')
+parser.add_argument('--patience', type=int, default=2,
+                    help='''number of epochs with no improvement after which
+                    learning rate with be reduced. ''')
 parser.add_argument('--optim', default='adam',
                     help="""Optimization method.
                     [sgd|adam]""")
+
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
                     help="Parameters are initialized over uniform distribution")
@@ -179,13 +186,15 @@ def main():
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                lr=opt.lr)
     # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min',
+                                               patience=opt.patience,
+                                               factor=opt.decay_factor)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
         scheduler.step(loss.data[0])
-        print('LR: \t: {:.6f}'.format(optimizer.param_groups[0]['lr']))
+        print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
                 loss_best = loss.data[0]
