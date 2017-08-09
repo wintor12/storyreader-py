@@ -10,21 +10,12 @@ from torchtext.data import BucketIterator
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--model', required=True, help='the path to the saved model')
-parser.add_argument('--src', default='./data/s_test', help='test story texts')
-parser.add_argument('--tgt', default='./data/p_y_test', help='test upvotes')
-parser.add_argument('--feature', default='./data/p_feature_test',
-                    help='test feature')
-parser.add_argument('--question', default='./data/q_test', help='test questions')
-
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--gpu', type=int, default=-1, help='gpu device to run on')
-parser.add_argument('--fix_length', type=int, default=360,
-                    help='fix the length of the story')
 
 
 opt = parser.parse_args()
 print(opt)
-
 
 if opt.gpu >= 0:
     torch.cuda.set_device(opt.gpu)
@@ -53,14 +44,15 @@ def val(model, validData, criterion, tb_valid=None):
 
 def main():
     print("Loading data ... ")
-    checkpoint = torch.load(opt.model, pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
+    checkpoint = torch.load(opt.model,
+                            map_location=lambda storage, loc: storage,
+                            pickle_module=dill)
 
     model_opt = checkpoint['opt']
     print(model_opt)
+    testData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
 
-    testData = StoryDataset(fields, opt.src, opt.question, opt.feature,
-                            opt.tgt, opt.fix_length)
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 

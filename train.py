@@ -135,7 +135,7 @@ def main():
     vocab = fields['src'].vocab
     print(' * vocabulary size. source = %d *' % len(vocab))
 
-    tb_train, tb_valid = None, None
+    tb_train, tb_valid, tb_test = None, None, None
     if opt.crayon:
         tb_client = CrayonClient()
         tb_name = '{}-{}'.format(datetime.now().strftime("%y%m%d-%H%M%S"),
@@ -198,8 +198,6 @@ def main():
     for e in range(1, opt.epoch + 1):
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
-        if opt.debug:
-            test_loss = val(model, testData, e, criterion, tb_test)
         scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
