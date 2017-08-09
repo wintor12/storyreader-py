@@ -16,6 +16,12 @@ parser.add_argument('--valid_tgt', default='p_y_val', help='valid upvotes')
 parser.add_argument('--valid_feature', default='p_feature_val',
                     help='valid feature')
 parser.add_argument('--valid_question', default='q_val', help='valid questions')
+parser.add_argument('--test_src', default='s_test', help='test story texts')
+parser.add_argument('--test_tgt', default='p_y_test', help='test upvotes')
+parser.add_argument('--test_feature', default='p_feature_test',
+                    help='test feature')
+parser.add_argument('--test_question', default='q_test', help='test questions')
+
 parser.add_argument('--data', default='./data/', help='output file for the prepared data')
 
 parser.add_argument('--src_vocab_size', type=int, default=20000,
@@ -47,6 +53,10 @@ def main():
                          opt.data + opt.valid_question,
                          opt.data + opt.valid_feature,
                          opt.data + opt.valid_tgt, opt.fix_length)
+    test = StoryDataset(fields, opt.data + opt.test_src,
+                         opt.data + opt.test_question,
+                         opt.data + opt.test_feature,
+                         opt.data + opt.test_tgt, opt.fix_length)
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
@@ -63,6 +73,8 @@ def main():
     torch.save(train, opt.data + 'train.pt', pickle_module=dill)
     print('Saving valid ...')
     torch.save(valid, opt.data + 'valid.pt', pickle_module=dill)
+    print('Saving test ...')
+    torch.save(test, opt.data + 'test.pt', pickle_module=dill)
     print('Saving fields ...')
     torch.save(fields, opt.data + 'fields.pt', pickle_module=dill)
 

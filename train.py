@@ -59,6 +59,8 @@ parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--save', default='./data/model/',
                     help='the path to save model files')
 parser.add_argument('--crayon', action='store_true', help='visualization')
+parser.add_argument('--debug', action='store_true', help='debug the model')
+
 
 opt = parser.parse_args()
 print(opt)
@@ -126,6 +128,8 @@ def main():
     trainData = torch.load(opt.data + 'train.pt', pickle_module=dill)
     fields = torch.load(opt.data + 'fields.pt', pickle_module=dill)
     validData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
+    if opt.debug:
+        testData = torch.load(opt.data + 'test.pt', pickle_module=dill)
     fields = dict(fields)
     print(list(fields.keys()))
     vocab = fields['src'].vocab
@@ -138,6 +142,7 @@ def main():
                                  opt.save)
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
+        tb_test = tb_client.create_experiment('{}/test'.format(tb_name))
 
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
@@ -147,14 +152,14 @@ def main():
     fc = models.Fc(num_features + 110, opt)
 
     if opt.reader == 'r':
-        model = models.RegionalReader(vocab,
-                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.RegionalReader(vocab, opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc)
     elif opt.reader == 's':
-        model = models.SequentialReader(vocab,
-                                        opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.SequentialReader(vocab, opt.word_vec_size,
+                                        s_rcnn, q_rcnn, fc)
     elif opt.reader == 'h':
-        model = models.HolisticReader(vocab,
-                                      opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.HolisticReader(vocab, opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
@@ -193,6 +198,8 @@ def main():
     for e in range(1, opt.epoch + 1):
         train(model, trainData, e, optimizer, criterion, tb_train)
         loss = val(model, validData, e, criterion, tb_valid)
+        if opt.debug:
+            test_loss = val(model, testData, e, criterion, tb_test)
         scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
