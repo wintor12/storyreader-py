@@ -59,7 +59,8 @@ def main():
     model_opt = checkpoint['opt']
     print(model_opt)
 
-    testData = StoryDataset(fields, opt.src, opt.question, opt.feature, opt.tgt, opt.fix_length)
+    testData = StoryDataset(fields, opt.src, opt.question, opt.feature,
+                            opt.tgt, opt.fix_length)
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
