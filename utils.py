@@ -3,16 +3,16 @@ import array
 import six
 import torch
 
-def weight_grad_norm(parameters, norm_type=2, average=True):
+
+def weight_grad_norm(parameters, norm_type=2):
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     total_norm = 0
     for p in parameters:
         param_norm = p.grad.data.norm(norm_type)
         total_norm += param_norm ** norm_type
-    avg_norm = total_norm / p.grad.data.view(-1).size(0)
     total_norm = total_norm ** (1. / norm_type)
-    avg_norm = avg_norm ** (1. / norm_type)
-    return total_norm, avg_norm
+    return total_norm
+
 
 def print_weight_grad(model, opt):
     print('model', weight_grad_norm(model.parameters()))
@@ -63,3 +63,10 @@ def load_word_vectors(path, wv_size, vocab, unk_init='random'):
         if wv_index is not None:
             wv[i] = wv_arr[wv_index]
     return wv
+
+
+class Statistics:
+
+    def __init__(self, **kwargs):
+        for key, value in list(kwargs.items()):
+            setattr(self, key, value)

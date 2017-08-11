@@ -93,15 +93,16 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
         output = model(batch)
         loss = criterion(output, batch.tgt)
         loss.backward()
-        optimizer.step()
         if batch_idx % opt.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * train.batch_size, len(trainData),
                 100. * batch_idx / len(train), loss.data[0]))
         if tb_train:
             tb_train.add_scalar_dict(
-                data={'loss': loss.data[0]},
+                data={'loss': loss.data[0],
+                      'model_norm':utils.weight_grad_norm(model.parameters())},
                 step=epoch)
+        optimizer.step()
 
 
 def val(model, validData, epoch, criterion, tb_valid=None):
