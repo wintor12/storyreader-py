@@ -69,4 +69,5 @@ class Statistics:
 
     def __init__(self, **kwargs):
         for key, value in list(kwargs.items()):
-            setattr(self, key, value)
+            if key is not None:
+                setattr(self, key, value)

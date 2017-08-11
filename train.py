@@ -11,6 +11,7 @@ from pycrayon import CrayonClient
 import torch.optim.lr_scheduler as lr_scheduler
 import os
 import utils
+from utils import Statistics
 
 
 parser = argparse.ArgumentParser()
@@ -98,10 +99,26 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                 epoch, batch_idx * train.batch_size, len(trainData),
                 100. * batch_idx / len(train), loss.data[0]))
         if tb_train:
+            stat = Statistics(loss = loss.data[0])
+            if opt.debug:
+                stat = Statistics(loss = loss.data[0],
+                                  model_grad = utils.weight_grad_norm(model.parameters()),
+                                  embed_grad = utils.weight_grad_norm(model.embed.parameters()),
+                                  q_grad = utils.weight_grad_norm(model.q_rcnn.parameters()),
+                                  s_grad = utils.weight_grad_norm(model.s_rcnn.parameters()),
+                                  fc_grad = utils.weight_grad_norm(model.fc.parameters()),
+                                  rnn_cell = utils.weight_grad_norm(model.rnn_cell.parameters())
+                                  if opt.reader == 's' else None,
+                                  rnn = utils.weight_grad_norm(model.rnn.parameters())
+                                  if opt.reader == 'h' else None,
+                )
+            # tb_train.add_scalar_dict(
+            #     data={'loss': loss.data[0],
+            #           'model_norm':utils.weight_grad_norm(model.parameters())},
+            #     step=epoch)
             tb_train.add_scalar_dict(
-                data={'loss': loss.data[0],
-                      'model_norm':utils.weight_grad_norm(model.parameters())},
-                step=epoch)
+                 data=stat.__dict__,
+                 step=epoch)
         optimizer.step()
 
 
