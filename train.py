@@ -10,6 +10,7 @@ from datetime import datetime
 from pycrayon import CrayonClient
 import torch.optim.lr_scheduler as lr_scheduler
 import os
+import utils
 
 
 parser = argparse.ArgumentParser()
@@ -22,14 +23,14 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 
 parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
+parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
 
 # optimizer
-parser.add_argument('--lr', type=float, default=0.00015, metavar='LR',
+parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
                     help='learning rate')
-parser.add_argument('--decay_factor', type=float, default=0.1,
+parser.add_argument('--decay_factor', type=float, default=0.5,
                     help='factor by which the learning rate will be reduced')
 parser.add_argument('--patience', type=int, default=2,
                     help='''number of epochs with no improvement after which
@@ -37,6 +38,8 @@ parser.add_argument('--patience', type=int, default=2,
 parser.add_argument('--optim', default='adam',
                     help="""Optimization method.
                     [sgd|adam]""")
+parser.add_argument('--epoch_fix_lr', type=int, default=20,
+                    help='number of epochs to train for')
 
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
@@ -164,6 +167,13 @@ def main():
     print('Intializing params')
     for p in model.parameters():
         p.data.uniform_(-opt.param_init, opt.param_init)
+    if opt.reader == 'h' or opt.reader == 's':
+        rnn = model.rnn if opt.reader == 'h' else model.rnn_cell
+        for name, param in rnn.named_parameters():
+            if 'weight_hh' in name:
+                nn.init.orthogonal(param)  # orthogonal init lstm U
+            if 'bias_hh' in name:
+                param.data[10:20] = 1  # set forget gate bias to 1
 
     # load pre_trained word vectors
     wv = None
@@ -194,8 +204,11 @@ def main():
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         train(model, trainData, e, optimizer, criterion, tb_train)
+        if opt.debug:
+            utils.print_weight_grad(model, opt)
         loss = val(model, validData, e, criterion, tb_valid)
-        scheduler.step(loss.data[0])
+        if e > opt.epoch_fix_lr:
+            scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
