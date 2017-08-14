@@ -41,6 +41,8 @@ parser.add_argument('--optim', default='adam',
                     [sgd|adam]""")
 parser.add_argument('--epoch_fix_lr', type=int, default=20,
                     help='number of epochs to train for')
+parser.add_argument('--grad_clipping', type=float, default=1.0,
+                    help='clip the gradients of region cnn')
 
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
@@ -99,22 +101,34 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                 epoch, batch_idx * train.batch_size, len(trainData),
                 100. * batch_idx / len(train), loss.data[0]))
         if tb_train:
-            stat = Statistics(loss = loss.data[0])
+            stat = Statistics(loss=loss.data[0])
             if opt.debug:
-                stat = Statistics(loss = loss.data[0],
-                                  model_grad = utils.weight_grad_norm(model.parameters()),
-                                  embed_grad = utils.weight_grad_norm(model.embed.parameters()),
-                                  q_grad = utils.weight_grad_norm(model.q_rcnn.parameters()),
-                                  s_grad = utils.weight_grad_norm(model.s_rcnn.parameters()),
-                                  fc_grad = utils.weight_grad_norm(model.fc.parameters()),
-                                  rnn_cell = utils.weight_grad_norm(model.rnn_cell.parameters())
+                stat = Statistics(loss=loss.data[0],
+                                  model_grad=utils.weight_grad_norm(
+                                      model.parameters()),
+                                  embed_grad=utils.weight_grad_norm(
+                                      model.embed.parameters()),
+                                  q_grad=utils.weight_grad_norm(
+                                      model.q_rcnn.parameters()),
+                                  s_grad=utils.weight_grad_norm(
+                                      model.s_rcnn.parameters()),
+                                  fc_grad=utils.weight_grad_norm(
+                                      model.fc.parameters()),
+                                  rnn_cell=utils.weight_grad_norm(
+                                      model.rnn_cell.parameters())
                                   if opt.reader == 's' else None,
-                                  rnn = utils.weight_grad_norm(model.rnn.parameters())
-                                  if opt.reader == 'h' else None,
+                                  rnn=utils.weight_grad_norm(
+                                      model.rnn.parameters())
+                                  if opt.reader == 'h' else None
                 )
             tb_train.add_scalar_dict(
-                 data=stat.__dict__,
-                 step=epoch)
+                data=stat.__dict__,
+                step=epoch
+            )
+        nn.utils.clip_grad_norm(model.q_rcnn.parameters(),
+                                opt.grad_clipping)
+        nn.utils.clip_grad_norm(model.s_rcnn.parameters(),
+                                opt.grad_clipping)
         optimizer.step()
 
 
