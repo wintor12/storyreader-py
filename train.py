@@ -26,7 +26,9 @@ parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
+parser.add_argument('--r_emb', type=int, default=10)
 parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
+
 
 # optimizer
 parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
@@ -176,9 +178,11 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    s_rcnn = models.RegionalCNN(opt, opt.region_nums)
-    q_rcnn = models.RegionalCNN(opt, 1)
-    fc = models.Fc(num_features + 110, opt)
+    s_rcnn = models.RegionalCNN(opt)
+    q_rcnn = models.RegionalCNN(opt)
+    fc_input_dim = num_features + opt.r_emb * (opt.region_nums +
+                                               1 if opt.region_nums > 0 else 1)
+    fc = models.Fc(fc_input_dim, opt)
 
     if opt.reader == 'r':
         model = models.RegionalReader(vocab, opt.word_vec_size,

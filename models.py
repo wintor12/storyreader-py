@@ -23,10 +23,9 @@ class Fc(nn.Module):
 
 
 class RegionalCNN(nn.Module):
-    def __init__(self, opt, regions):
+    def __init__(self, opt):
         super(RegionalCNN, self).__init__()
         self.opt = opt
-        self.regions = regions
         self.conv1_out = 32
         self.conv2_out = 32
         self.conv3_out = 16
@@ -45,7 +44,7 @@ class RegionalCNN(nn.Module):
 
     def forward(self, input):
         batch_size, _, emb_size = input.size()
-        region_input = input.view(batch_size, self.regions, 1,
+        region_input = input.view(batch_size, -1, 1,
                                   self.opt.region_words, emb_size)
 
         outputs = []
@@ -73,7 +72,7 @@ class RegionalReader(nn.Module):
                                   padding_idx=vocab.stoi[dataset.PAD_WORD])
         self.s_rcnn = s_rcnn
         self.q_rcnn = q_rcnn
-        self.r_fc = nn.Linear(320, 10)
+        self.r_fc = nn.Linear(320, opt.r_emb)
         self.fc = fc
         self.opt = opt
         self.dropout = nn.Dropout(self.opt.dropout)
@@ -89,9 +88,16 @@ class RegionalReader(nn.Module):
         returns:
           batch x regions x 10
         """
-        # src_len x batch x emb_size
-        s_embs = self.embed(batch.src[0])
-        q_embs = self.embed(batch.question[0][:36])
+        # preprocess text and question
+        if self.opt.region_nums == 0:
+            length = batch.src[0].size(0)
+            length = length - length % self.opt.region_words
+            text = batch.src[0][:length]
+        else:
+            text = batch.src[0]
+        question = batch.question[0][:36]
+        s_embs = self.embed(text)
+        q_embs = self.embed(question)
 
         # use regional cnn to get region embedding
         s_r_emb = self.s_rcnn(s_embs.transpose(0, 1).contiguous())
@@ -99,6 +105,7 @@ class RegionalReader(nn.Module):
         q_r_emb = self.q_rcnn(q_embs.transpose(0, 1).contiguous())
         r_emb = torch.cat([q_r_emb, s_r_emb], 1)
         # batch x (sregions + qregions) x 320
+
         return r_emb
 
     def forward(self, batch):
@@ -108,8 +115,11 @@ class RegionalReader(nn.Module):
             emb_t = emb_t.squeeze(1)
             x = self.r_fc(emb_t)
             outputs.append(x)
-        r_emb = torch.stack(outputs, 1)
-        r_emb = self.dropout(r_emb.view(r_emb.size(0), -1))
+        r_emb = torch.stack(outputs, 1)  # batch x regions x r_emb
+        if self.opt.region_nums == 0:
+            r_emb = r_emb.max(dim=1)[0]
+        r_emb = r_emb.view(r_emb.size(0), -1)
+        # r_emb = self.dropout(r_emb)
         fc_input = torch.cat([r_emb, batch.feature], 1)
         output = self.fc(fc_input)
         return output

@@ -12,31 +12,44 @@ PAD_WORD = "<pad>"
 class StoryDataset(torchtext.data.Dataset):
 
     def __init__(self, fields, src_path, question_path,
-                 feature_path, tgt_path, fix_length_src, **kwargs):
+                 feature_path, tgt_path, opt, **kwargs):
 
         def src_preprocessing(src_list):
             # remove stopwords
-            stops = set(stopwords.words("english"))
-            src_list = [word for word in src_list if word not in stops]
-
-            if len(src_list) == fix_length_src:
-                return src_list
+            if opt.stopwords:
+                stops = set(stopwords.words("english"))
+                src_list = [word for word in src_list if word not in stops]
 
             processed_src = []
-            chunked_src = np.array_split(np.array(src_list), 10)
-            if len(src_list) < fix_length_src:
-                for c in chunked_src:
-                    num_pad = fix_length_src / 10 - len(c)
-                    c = c.tolist()
-                    leading_pads = [PAD_WORD] * int(num_pad / 2)
-                    trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
-                    processed_src = leading_pads + c + trailing_pads
-            else:
-                for c in chunked_src:
-                    start = int((len(c) - fix_length_src / 10) / 2)
-                    temp = c[start:int(start + fix_length_src / 10)].tolist()
-                    processed_src += temp
-            return processed_src
+            if opt.fix_length > 0:
+                fix_length_src = opt.fix_length
+                if len(src_list) == fix_length_src:
+                    return src_list
+
+                chunked_src = np.array_split(np.array(src_list), 10)
+                if len(src_list) < fix_length_src:
+                    for c in chunked_src:
+                        num_pad = fix_length_src / 10 - len(c)
+                        c = c.tolist()
+                        leading_pads = [PAD_WORD] * int(num_pad / 2)
+                        trailing_pads = [PAD_WORD] * int(num_pad - len(leading_pads))
+                        processed_src = leading_pads + c + trailing_pads
+                else:
+                    for c in chunked_src:
+                        start = int((len(c) - fix_length_src / 10) / 2)
+                        temp = c[start:int(start + fix_length_src / 10)].tolist()
+                        processed_src += temp
+            return processed_src if processed_src else src_list
+
+        def question_preprocessing(q_list):
+            # remove stopwords
+            if opt.stopwords:
+                stops = set(stopwords.words("english"))
+                q_list = [word for word in q_list if word not in stops]
+            q_list = q_list[:36]
+            if len(q_list) < 36:
+                q_list = q_list + [PAD_WORD] * (36 - len(q_list))
+            return q_list
 
         examples = []
         self.src_vocabs = []
@@ -50,6 +63,7 @@ class StoryDataset(torchtext.data.Dataset):
                 src = src_line.strip().split()
                 src = src_preprocessing(src)
                 question = q_line.strip().split()
+                question = question_preprocessing(question)
                 feature = f_line.strip().split()
                 feature = [float(x) for x in feature]
                 tgt = float(t_line.strip())
@@ -74,7 +88,7 @@ class StoryDataset(torchtext.data.Dataset):
         fields = {}
         fields['src'] = torchtext.data.Field(
             pad_token=PAD_WORD,
-            fix_length=opt.fix_length,
+            fix_length=opt.fix_length if opt.fix_length > 0 else None,
             lower=True,
             include_lengths=True)
 
