@@ -10,6 +10,8 @@ from datetime import datetime
 from pycrayon import CrayonClient
 import torch.optim.lr_scheduler as lr_scheduler
 import os
+import utils
+from utils import Statistics
 
 
 parser = argparse.ArgumentParser()
@@ -22,14 +24,14 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 
 parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
+parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
 
 # optimizer
-parser.add_argument('--lr', type=float, default=0.00015, metavar='LR',
+parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
                     help='learning rate')
-parser.add_argument('--decay_factor', type=float, default=0.1,
+parser.add_argument('--decay_factor', type=float, default=0.5,
                     help='factor by which the learning rate will be reduced')
 parser.add_argument('--patience', type=int, default=2,
                     help='''number of epochs with no improvement after which
@@ -37,6 +39,10 @@ parser.add_argument('--patience', type=int, default=2,
 parser.add_argument('--optim', default='adam',
                     help="""Optimization method.
                     [sgd|adam]""")
+parser.add_argument('--epoch_fix_lr', type=int, default=20,
+                    help='number of epochs to train for')
+parser.add_argument('--grad_clipping', type=float, default=0,
+                    help='clip the gradients of region cnn')
 
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
 parser.add_argument('--param_init', type=float, default=0.1,
@@ -90,15 +96,41 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
         output = model(batch)
         loss = criterion(output, batch.tgt)
         loss.backward()
-        optimizer.step()
+        if opt.grad_clipping:
+            nn.utils.clip_grad_norm(model.q_rcnn.parameters(),
+                                    opt.grad_clipping)
+            nn.utils.clip_grad_norm(model.s_rcnn.parameters(),
+                                    opt.grad_clipping)
         if batch_idx % opt.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * train.batch_size, len(trainData),
                 100. * batch_idx / len(train), loss.data[0]))
         if tb_train:
+            stat = Statistics(loss=loss.data[0])
+            if opt.debug:
+                stat = Statistics(loss=loss.data[0],
+                                  model_grad=utils.weight_grad_norm(
+                                      model.parameters()),
+                                  embed_grad=utils.weight_grad_norm(
+                                      model.embed.parameters()),
+                                  q_grad=utils.weight_grad_norm(
+                                      model.q_rcnn.parameters()),
+                                  s_grad=utils.weight_grad_norm(
+                                      model.s_rcnn.parameters()),
+                                  fc_grad=utils.weight_grad_norm(
+                                      model.fc.parameters()),
+                                  rnn_cell=utils.weight_grad_norm(
+                                      model.rnn_cell.parameters())
+                                  if opt.reader == 's' else None,
+                                  rnn=utils.weight_grad_norm(
+                                      model.rnn.parameters())
+                                  if opt.reader == 'h' else None
+                )
             tb_train.add_scalar_dict(
-                data={'loss': loss.data[0]},
-                step=epoch)
+                data=stat.__dict__,
+                step=epoch
+            )
+        optimizer.step()
 
 
 def val(model, validData, epoch, criterion, tb_valid=None):
@@ -150,13 +182,13 @@ def main():
 
     if opt.reader == 'r':
         model = models.RegionalReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc)
+                                      s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 's':
         model = models.SequentialReader(vocab, opt.word_vec_size,
-                                        s_rcnn, q_rcnn, fc)
+                                        s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 'h':
         model = models.HolisticReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc)
+                                      s_rcnn, q_rcnn, fc, opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
@@ -164,6 +196,13 @@ def main():
     print('Intializing params')
     for p in model.parameters():
         p.data.uniform_(-opt.param_init, opt.param_init)
+    if opt.reader == 'h' or opt.reader == 's':
+        rnn = model.rnn if opt.reader == 'h' else model.rnn_cell
+        for name, param in rnn.named_parameters():
+            if 'weight_hh' in name:
+                nn.init.orthogonal(param)  # orthogonal init lstm U
+            if 'bias_hh' in name:
+                param.data[10:20] = 1  # set forget gate bias to 1
 
     # load pre_trained word vectors
     wv = None
@@ -194,8 +233,11 @@ def main():
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     for e in range(1, opt.epoch + 1):
         train(model, trainData, e, optimizer, criterion, tb_train)
+        if opt.debug:
+            utils.print_weight_grad(model, opt)
         loss = val(model, validData, e, criterion, tb_valid)
-        scheduler.step(loss.data[0])
+        if e > opt.epoch_fix_lr:
+            scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
