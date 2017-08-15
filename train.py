@@ -41,7 +41,7 @@ parser.add_argument('--optim', default='adam',
                     [sgd|adam]""")
 parser.add_argument('--epoch_fix_lr', type=int, default=20,
                     help='number of epochs to train for')
-parser.add_argument('--grad_clipping', type=float, default=1.0,
+parser.add_argument('--grad_clipping', type=float, default=0,
                     help='clip the gradients of region cnn')
 
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout between layers')
@@ -96,6 +96,11 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
         output = model(batch)
         loss = criterion(output, batch.tgt)
         loss.backward()
+        if opt.grad_clipping:
+            nn.utils.clip_grad_norm(model.q_rcnn.parameters(),
+                                    opt.grad_clipping)
+            nn.utils.clip_grad_norm(model.s_rcnn.parameters(),
+                                    opt.grad_clipping)
         if batch_idx % opt.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * train.batch_size, len(trainData),
@@ -125,10 +130,6 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                 data=stat.__dict__,
                 step=epoch
             )
-        nn.utils.clip_grad_norm(model.q_rcnn.parameters(),
-                                opt.grad_clipping)
-        nn.utils.clip_grad_norm(model.s_rcnn.parameters(),
-                                opt.grad_clipping)
         optimizer.step()
 
 
@@ -181,13 +182,13 @@ def main():
 
     if opt.reader == 'r':
         model = models.RegionalReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc)
+                                      s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 's':
         model = models.SequentialReader(vocab, opt.word_vec_size,
-                                        s_rcnn, q_rcnn, fc)
+                                        s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 'h':
         model = models.HolisticReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc)
+                                      s_rcnn, q_rcnn, fc, opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)

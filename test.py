@@ -59,14 +59,14 @@ def main():
     q_rcnn = models.RegionalCNN(model_opt, 1)
     fc = models.Fc(num_features + 110, model_opt)
     if model_opt.reader == 'r':
-        model = models.RegionalReader(fields['src'].vocab,
-                                      model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.RegionalReader(fields['src'].vocab, model_opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc, model_opt)
     elif model_opt.reader == 's':
-        model = models.SequentialReader(fields['src'].vocab,
-                                        model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.SequentialReader(fields['src'].vocab, model_opt.word_vec_size,
+                                        s_rcnn, q_rcnn, fc, model_opt)
     elif model_opt.reader == 'h':
-        model = models.HolisticReader(fields['src'].vocab,
-                                      model_opt.word_vec_size, s_rcnn, q_rcnn, fc)
+        model = models.HolisticReader(fields['src'].vocab, model_opt.word_vec_size,
+                                      s_rcnn, q_rcnn, fc, model_opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)
