@@ -26,7 +26,6 @@ parser.add_argument('--seed', type=int, default=1234, help='seed')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
-parser.add_argument('--r_emb', type=int, default=10)
 parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
 
 
@@ -62,6 +61,8 @@ parser.add_argument('--region_nums', type=int, default=10,
                     help="Number of regions in each text")
 parser.add_argument('--region_words', type=int, default=36,
                     help="Number of words in each region")
+parser.add_argument('--r_emb', type=int, default=10,
+                    help='Region embedding dimension')
 
 parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--save', default='./data/model/',

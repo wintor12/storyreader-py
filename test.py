@@ -55,9 +55,11 @@ def main():
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
-    s_rcnn = models.RegionalCNN(model_opt, model_opt.region_nums)
-    q_rcnn = models.RegionalCNN(model_opt, 1)
-    fc = models.Fc(num_features + 110, model_opt)
+    s_rcnn = models.RegionalCNN(model_opt)
+    q_rcnn = models.RegionalCNN(model_opt)
+    fc_input_dim = num_features + model_opt.r_emb * (model_opt.region_nums +
+                                                     1 if model_opt.region_nums > 0 else 1)
+    fc = models.Fc(fc_input_dim, model_opt)
     if model_opt.reader == 'r':
         model = models.RegionalReader(fields['src'].vocab, model_opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, model_opt)
