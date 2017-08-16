@@ -41,6 +41,10 @@ class RegionalCNN(nn.Module):
         self.conv3 = nn.Conv2d(self.conv2_out, self.conv3_out,
                                self.conv3_kernel, self.conv3_stride)
         self.dropout = nn.Dropout(self.opt.dropout)
+        self.batch_norm1 = nn.BatchNorm2d(self.conv1_out)
+        self.batch_norm2 = nn.BatchNorm2d(self.conv2_out)
+        self.batch_norm3 = nn.BatchNorm2d(self.conv3_out)
+
 
     def forward(self, input):
         batch_size, _, emb_size = input.size()
@@ -50,11 +54,11 @@ class RegionalCNN(nn.Module):
         outputs = []
         for region in region_input.split(1, dim=1):
             region = region.squeeze(1)
-            x = F.relu(self.conv1(region))
+            x = F.relu(self.batch_norm1(self.conv1(region)))
             x = F.max_pool2d(x, 2)
-            x = F.relu(self.conv2(x))
+            x = F.relu(self.batch_norm2(self.conv2(x)))
             x = F.max_pool2d(x, 2)
-            x = F.relu(self.conv3(x))
+            x = F.relu(self.batch_norm3(self.conv3(x)))
             x = F.max_pool2d(x, 2)
             x = x.view(batch_size, -1)
             x = self.dropout(x)
