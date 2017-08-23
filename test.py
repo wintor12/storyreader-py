@@ -1,7 +1,7 @@
 import argparse
 import torch
 import torch.nn as nn
-import models
+import models.Models as Models
 import dill
 from torchtext.data import BucketIterator
 
@@ -55,19 +55,19 @@ def main():
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
-    s_rcnn = models.RegionalCNN(model_opt)
-    q_rcnn = models.RegionalCNN(model_opt)
+    s_rcnn = Models.RegionalCNN(model_opt)
+    q_rcnn = Models.RegionalCNN(model_opt)
     fc_input_dim = num_features + model_opt.r_emb * (model_opt.region_nums +
                                                      1 if model_opt.region_nums > 0 else 1)
-    fc = models.Fc(fc_input_dim, model_opt)
+    fc = Models.Fc(fc_input_dim, model_opt)
     if model_opt.reader == 'r':
-        model = models.RegionalReader(fields['src'].vocab, model_opt.word_vec_size,
+        model = Models.RegionalReader(fields['src'].vocab, model_opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, model_opt)
     elif model_opt.reader == 's':
-        model = models.SequentialReader(fields['src'].vocab, model_opt.word_vec_size,
+        model = Models.SequentialReader(fields['src'].vocab, model_opt.word_vec_size,
                                         s_rcnn, q_rcnn, fc, model_opt)
     elif model_opt.reader == 'h':
-        model = models.HolisticReader(fields['src'].vocab, model_opt.word_vec_size,
+        model = Models.HolisticReader(fields['src'].vocab, model_opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, model_opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')

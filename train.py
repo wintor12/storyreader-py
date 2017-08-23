@@ -4,7 +4,7 @@ import torch.utils.data
 import torch.optim as optim
 import torch.nn as nn
 from torchtext.data import BucketIterator
-import models
+import models.Models as Models
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
@@ -179,20 +179,20 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    s_rcnn = models.RegionalCNN(opt)
-    q_rcnn = models.RegionalCNN(opt)
+    s_rcnn = Models.RegionalCNN(opt)
+    q_rcnn = Models.RegionalCNN(opt)
     fc_input_dim = num_features + opt.r_emb * (opt.region_nums +
                                                1 if opt.region_nums > 0 else 1)
-    fc = models.Fc(fc_input_dim, opt)
+    fc = Models.Fc(fc_input_dim, opt)
 
     if opt.reader == 'r':
-        model = models.RegionalReader(vocab, opt.word_vec_size,
+        model = Models.RegionalReader(vocab, opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 's':
-        model = models.SequentialReader(vocab, opt.word_vec_size,
+        model = Models.SequentialReader(vocab, opt.word_vec_size,
                                         s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 'h':
-        model = models.HolisticReader(vocab, opt.word_vec_size,
+        model = Models.HolisticReader(vocab, opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
