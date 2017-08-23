@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torchtext.data import BucketIterator
 import models.Models as Models
+import models.ModelsFixLen as ModelsFixLen
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
@@ -127,8 +128,7 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                                   if opt.reader == 's' else None,
                                   rnn=utils.weight_grad_norm(
                                       model.rnn.parameters())
-                                  if opt.reader == 'h' else None
-                )
+                                  if opt.reader == 'h' else None)
             tb_train.add_scalar_dict(
                 data=stat.__dict__,
                 step=epoch
@@ -189,11 +189,19 @@ def main():
         model = Models.RegionalReader(vocab, opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 's':
-        model = Models.SequentialReader(vocab, opt.word_vec_size,
-                                        s_rcnn, q_rcnn, fc, opt)
+        if opt.region_nums:
+            model = ModelsFixLen.SequentialReader(vocab, opt.word_vec_size,
+                                                  s_rcnn, q_rcnn, fc, opt)
+        else:
+            model = Models.SequentialReader(vocab, opt.word_vec_size,
+                                            s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 'h':
-        model = Models.HolisticReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc, opt)
+        if opt.region_nums:
+            model = ModelsFixLen.HolisticReader(vocab, opt.word_vec_size,
+                                                s_rcnn, q_rcnn, fc, opt)
+        else:
+            model = Models.HolisticReader(vocab, opt.word_vec_size,
+                                          s_rcnn, q_rcnn, fc, opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)

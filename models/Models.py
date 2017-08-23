@@ -45,12 +45,10 @@ class RegionalCNN(nn.Module):
         # self.batch_norm2 = nn.BatchNorm2d(self.conv2_out)
         # self.batch_norm3 = nn.BatchNorm2d(self.conv3_out)
 
-
     def forward(self, input):
         batch_size, _, emb_size = input.size()
         region_input = input.view(batch_size, -1, 1,
                                   self.opt.region_words, emb_size)
-
         outputs = []
         for region in region_input.split(1, dim=1):
             region = region.squeeze(1)
@@ -58,7 +56,7 @@ class RegionalCNN(nn.Module):
             x = F.relu(self.conv1(region))
             x = F.max_pool2d(x, 2)
             # x = F.relu(self.batch_norm2(self.conv2(x)))
-            x = F.relu(self.conv2(x))            
+            x = F.relu(self.conv2(x))
             x = F.max_pool2d(x, 2)
             # x = F.relu(self.batch_norm3(self.conv3(x)))
             x = F.relu(self.conv3(x))
@@ -185,7 +183,7 @@ class HolisticReader(RegionalReader):
         # h_output = h_output.max(dim=1)[0]
         # r_output = r_emb.max(dim=1)[0]
         h_output = h_output.mean(1)
-        r_output = r_emb.mean(1)        
+        r_output = r_emb.mean(1)
         gate = F.sigmoid(self.r_w(r_output) + self.h_w(h_output))
         r_emb = torch.mul(gate, h_output)
         r_emb = r_emb.view(r_emb.size(0), -1)

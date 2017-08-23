@@ -29,6 +29,7 @@ def print_weight_grad(model, opt):
         print('r_w', weight_grad_norm(model.r_w.parameters()))
         print('h_w', weight_grad_norm(model.h_w.parameters()))
 
+
 def load_word_vectors(path, wv_size, vocab, unk_init='random'):
     """Load word vectors from a path"""
     print('Loading word vectors from ' + path)

@@ -21,7 +21,7 @@ class StoryDataset(torchtext.data.Dataset):
                 src_list = [word for word in src_list if word not in stops]
                 if len(src_list) < 36:
                     src_list += [PAD_WORD] * (36 - len(src_list))
-                
+
             processed_src = []
             if opt.fix_length > 0:
                 fix_length_src = opt.fix_length
