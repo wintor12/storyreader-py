@@ -26,8 +26,8 @@ def print_weight_grad(model, opt):
         print('h_w', weight_grad_norm(model.h_w.parameters()))
     if opt.reader == 'h':
         print('rnn', weight_grad_norm(model.rnn.parameters()))
-        print('h_conv', weight_grad_norm(model.h_conv.parameters()))
-        print('r_conv', weight_grad_norm(model.r_conv.parameters()))
+        print('r_w', weight_grad_norm(model.r_w.parameters()))
+        print('h_w', weight_grad_norm(model.h_w.parameters()))
 
 
 def load_word_vectors(path, wv_size, vocab, unk_init='random'):

@@ -4,7 +4,8 @@ import torch.utils.data
 import torch.optim as optim
 import torch.nn as nn
 from torchtext.data import BucketIterator
-import models
+import models.Models as Models
+import models.ModelsFixLen as ModelsFixLen
 import dill
 from datetime import datetime
 from pycrayon import CrayonClient
@@ -27,6 +28,7 @@ parser.add_argument('--batch_size', type=int, default=32, help='input batch size
 parser.add_argument('--hidden1', type=int, default=128)
 parser.add_argument('--hidden2', type=int, default=128)
 parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
+
 
 # optimizer
 parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
@@ -60,6 +62,8 @@ parser.add_argument('--region_nums', type=int, default=10,
                     help="Number of regions in each text")
 parser.add_argument('--region_words', type=int, default=36,
                     help="Number of words in each region")
+parser.add_argument('--r_emb', type=int, default=10,
+                    help='Region embedding dimension')
 
 parser.add_argument('--data', default='./data/', help='the path to load data')
 parser.add_argument('--save', default='./data/model/',
@@ -124,8 +128,7 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                                   if opt.reader == 's' else None,
                                   rnn=utils.weight_grad_norm(
                                       model.rnn.parameters())
-                                  if opt.reader == 'h' else None
-                )
+                                  if opt.reader == 'h' else None)
             tb_train.add_scalar_dict(
                 data=stat.__dict__,
                 step=epoch
@@ -176,19 +179,29 @@ def main():
     num_features = len(trainData[0].feature)
     print('Num of features: ' + str(num_features))
 
-    s_rcnn = models.RegionalCNN(opt, opt.region_nums)
-    q_rcnn = models.RegionalCNN(opt, 1)
-    fc = models.Fc(num_features + 110, opt)
+    s_rcnn = Models.RegionalCNN(opt)
+    q_rcnn = Models.RegionalCNN(opt)
+    fc_input_dim = num_features + opt.r_emb * (opt.region_nums +
+                                               1 if opt.region_nums > 0 else 1)
+    fc = Models.Fc(fc_input_dim, opt)
 
     if opt.reader == 'r':
-        model = models.RegionalReader(vocab, opt.word_vec_size,
+        model = Models.RegionalReader(vocab, opt.word_vec_size,
                                       s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 's':
-        model = models.SequentialReader(vocab, opt.word_vec_size,
-                                        s_rcnn, q_rcnn, fc, opt)
+        if opt.region_nums:
+            model = ModelsFixLen.SequentialReader(vocab, opt.word_vec_size,
+                                                  s_rcnn, q_rcnn, fc, opt)
+        else:
+            model = Models.SequentialReader(vocab, opt.word_vec_size,
+                                            s_rcnn, q_rcnn, fc, opt)
     elif opt.reader == 'h':
-        model = models.HolisticReader(vocab, opt.word_vec_size,
-                                      s_rcnn, q_rcnn, fc, opt)
+        if opt.region_nums:
+            model = ModelsFixLen.HolisticReader(vocab, opt.word_vec_size,
+                                                s_rcnn, q_rcnn, fc, opt)
+        else:
+            model = Models.HolisticReader(vocab, opt.word_vec_size,
+                                          s_rcnn, q_rcnn, fc, opt)
     else:
         raise Exception('reader has to be "r" or "s" or "h"')
     print(model)

@@ -27,7 +27,9 @@ parser.add_argument('--data', default='./data/', help='output file for the prepa
 parser.add_argument('--src_vocab_size', type=int, default=20000,
                     help='size of the source vocabulary')
 parser.add_argument('--fix_length', type=int, default=360,
-                    help='fix the length of the story')
+                    help='fix the length of the story, if 0, flexible length')
+parser.add_argument('--stopwords', action='store_true',
+                    help='if true, remove stopwords')
 
 parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
@@ -48,15 +50,15 @@ def main():
     train = StoryDataset(fields, opt.data + opt.train_src,
                          opt.data + opt.train_question,
                          opt.data + opt.train_feature,
-                         opt.data + opt.train_tgt, opt.fix_length)
+                         opt.data + opt.train_tgt, opt)
     valid = StoryDataset(fields, opt.data + opt.valid_src,
                          opt.data + opt.valid_question,
                          opt.data + opt.valid_feature,
-                         opt.data + opt.valid_tgt, opt.fix_length)
+                         opt.data + opt.valid_tgt, opt)
     test = StoryDataset(fields, opt.data + opt.test_src,
                         opt.data + opt.test_question,
                         opt.data + opt.test_feature,
-                        opt.data + opt.test_tgt, opt.fix_length)
+                        opt.data + opt.test_tgt, opt)
 
     print('Building Vocab ... ')
     StoryDataset.build_vocab(train, opt)
