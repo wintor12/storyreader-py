@@ -1,4 +1,3 @@
-import os
 import codecs
 from datetime import date
 
@@ -7,7 +6,8 @@ month2num = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'June': 6,
              'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
 week2num = {'Fri': 19, 'Sat': 20, 'Sun': 21, 'Mon': 22, 'Tue': 23, 'Wed': 24,
             'Thu': 25}
-current_date = date(2016, 8, 26)
+current_date = date(2016, 7, 1)
+current_date2 = date(2017, 4, 1)
 
 
 path = './all_data'
@@ -79,6 +79,7 @@ def preprocessTime(time, current_date):
         year -= 1
     return date(year, month, day)
 
+
 def saveTime(time_path, save_path, current_time):
     times = loadTime(time_path)
     print(len(times))
@@ -88,6 +89,10 @@ def saveTime(time_path, save_path, current_time):
 
 
 def saveTime2(title_path, date_path, title2_path, save_path):
+    '''
+    find corresponding date from the titles in
+    old version dataset and copy to new version dataset
+    '''
     with open(title_path) as p:
         titles = p.readlines()
     with open(date_path) as p:
@@ -99,8 +104,19 @@ def saveTime2(title_path, date_path, title2_path, save_path):
     print(len(dates2))
     with open(save_path, 'w') as p:
         p.write('\n'.join(dates2))
-        
 
+
+def processDate(date_path, save_path, current_date):
+    with open(date_path) as p:
+        dates = p.readlines()
+    dates = [d.strip().split('-') for d in dates]
+    days = [str((current_date - date(int(d[0]), int(d[1]), int(d[2]))).days)
+             for d in dates]
+    with open(save_path, 'w') as p:
+        p.write('\n'.join(days))
+
+
+        
 def main():
     # train_examples = loadData(src_path, question_path,
     # feature_path, tgt_path, time_path)
@@ -109,18 +125,25 @@ def main():
     # saveTime(time_train_path, './all_data/date_train', current_date)
     # saveTime(time_val_path, './all_data/date_val', current_date)
     # saveTime(time_test_path, './all_data/date_test', current_date)
-    
+
     # times_diff = [(current_date - time).days for time in times]
 
-    saveTime2('./all_data/title_train.txt', './all_data/date_train',
-              './all_data/title2_train.txt', './all_data/date2_train')
+    # saveTime2('./all_data/title_train.txt', './all_data/date_train',
+    #           './all_data/title2_train.txt', './all_data/date2_train')
 
-    saveTime2('./all_data/title_val.txt', './all_data/date_val',
-              './all_data/title2_val.txt', './all_data/date2_val')
+    # saveTime2('./all_data/title_val.txt', './all_data/date_val',
+    #           './all_data/title2_val.txt', './all_data/date2_val')
 
-    saveTime2('./all_data/title_test.txt', './all_data/date_test',
-              './all_data/title2_test.txt', './all_data/date2_test')
+    # saveTime2('./all_data/title_test.txt', './all_data/date_test',
+    #           './all_data/title2_test.txt', './all_data/date2_test')
 
+    processDate('./all_data/date_train', './all_data/day_train', current_date)
+    processDate('./all_data/date_val', './all_data/day_val', current_date)
+    processDate('./all_data/date_test', './all_data/day_test', current_date)
+
+    processDate('./all_data/date2_train', './all_data/day2_train', current_date2)
+    processDate('./all_data/date2_val', './all_data/day2_val', current_date2)
+    processDate('./all_data/date2_test', './all_data/day2_test', current_date2)
 
 if __name__ == '__main__':
     main()
