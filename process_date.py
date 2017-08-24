@@ -15,7 +15,12 @@ src_path = './all_data/s_train'
 question_path = './all_data/q_train'
 feature_path = './all_data/feature_train'
 tgt_path = './all_data/y_train'
-time_path = './all_data/time_train.txt'
+time_train_path = './all_data/time_train.txt'
+time_val_path = './all_data/time_val.txt'
+time_test_path = './all_data/time_test.txt'
+time2_train_path = './all_data/time_train.txt'
+time2_val_path = './all_data/time_train.txt'
+time2_test_path = './all_data/time_train.txt'
 title_path = './all_data/title_train.txt'
 
 
@@ -73,6 +78,27 @@ def preprocessTime(time, current_date):
     if (current_date - d).days < 0:
         year -= 1
     return date(year, month, day)
+
+def saveTime(time_path, save_path, current_time):
+    times = loadTime(time_path)
+    print(len(times))
+    times = [str(preprocessTime(time, current_date)) for time in times]
+    with open(save_path, 'w') as p:
+        p.write('\n'.join(times))
+
+
+def saveTime2(title_path, date_path, title2_path, save_path):
+    with open(title_path) as p:
+        titles = p.readlines()
+    with open(date_path) as p:
+        dates = p.readlines()
+    with open(title2_path) as p:
+        titles2 = p.readlines()
+    print(len(titles), len(dates), len(titles2))
+    dates2 = [dates[titles.index(t)].strip() for t in titles2]
+    print(len(dates2))
+    with open(save_path, 'w') as p:
+        p.write('\n'.join(dates2))
         
 
 def main():
@@ -80,13 +106,20 @@ def main():
     # feature_path, tgt_path, time_path)
     # print(train_examples[12000])
     # times = [x['time'] for x in train_examples]
-    times = loadTime(time_path)
-    print(len(times))
-    times = [preprocessTime(time, current_date) for time in times]
-    times_diff = [(current_date - time).days for time in times]
-    print(times[times_diff.index(2350)])
-    print(min(times_diff))
-    print(times[times_diff.index(min(times_diff))])
+    # saveTime(time_train_path, './all_data/date_train', current_date)
+    # saveTime(time_val_path, './all_data/date_val', current_date)
+    # saveTime(time_test_path, './all_data/date_test', current_date)
+    
+    # times_diff = [(current_date - time).days for time in times]
+
+    saveTime2('./all_data/title_train.txt', './all_data/date_train',
+              './all_data/title2_train.txt', './all_data/date2_train')
+
+    saveTime2('./all_data/title_val.txt', './all_data/date_val',
+              './all_data/title2_val.txt', './all_data/date2_val')
+
+    saveTime2('./all_data/title_test.txt', './all_data/date_test',
+              './all_data/title2_test.txt', './all_data/date2_test')
 
 
 if __name__ == '__main__':
