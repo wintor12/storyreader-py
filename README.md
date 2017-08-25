@@ -54,3 +54,11 @@ python train.py --pre_word_vec --gpus 0
 ```bash
 python test.py --model MODEL_PATH
 ```
+
+===============================================
+
+# Separate training
+## Train view and log view feature:
+```bash
+python train_feature.py --gpus 0
+```
