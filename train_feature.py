@@ -14,6 +14,10 @@ import dill
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--mode', default='train', type=str,
+                    help='''train | pred, train base model using new and old dataset,
+                    predict log upvote using only old dataset''')
+parser.add_argument('--trained_model', type=str, help='trained model to load in pred mode')
 parser.add_argument('--model', default='nn', type=str, help='model')
 parser.add_argument('--batchnorm', action='store_true')
 
@@ -172,17 +176,8 @@ def dataLoad():
         feature_test[:, 1:], y_train, y_val, y_test
 
 
-def main():
-    feature_train, feature_val, feature_test, y_train, y_val, y_test = dataLoad()
-    print(feature_train.shape, feature_val.shape, feature_test.shape)
-    if opt.model != 'nn':
-        model = RandomForestRegressor(n_estimators=100)
-        print(model)
-        model.fit(feature_train, y_train)
-        pred = model.predict(feature_test)
-        print(np.mean(np.power(pred - y_test, 2)))
-        return
-
+def createDataLoader(feature_train, feature_val, feature_test,
+                     y_train, y_val, y_test):
     feature_train, feature_val, feature_test = (torch.from_numpy(feature_train).float(),
                                                 torch.from_numpy(feature_val).float(),
                                                 torch.from_numpy(feature_test).float())
@@ -196,11 +191,27 @@ def main():
     train_loader = DataLoader(dataset_train, batch_size=opt.batchSize,
                               shuffle=True, num_workers=1)
     val_loader = DataLoader(dataset_val, batch_size=opt.batchSize,
-                            shuffle=True, num_workers=1)
+                            shuffle=False, num_workers=1)
     test_loader = DataLoader(dataset_test, batch_size=opt.batchSize,
-                             shuffle=True, num_workers=1)
+                             shuffle=False, num_workers=1)
+    return train_loader, val_loader, test_loader
 
-    num_features = feature_train.size(1)
+
+def trainAllData():
+    feature_train, feature_val, feature_test, y_train, y_val, y_test = dataLoad()
+    print(feature_train.shape, feature_val.shape, feature_test.shape)
+    if opt.model != 'nn':
+        model = RandomForestRegressor(n_estimators=100)
+        print(model)
+        model.fit(feature_train, y_train)
+        pred = model.predict(feature_test)
+        print(np.mean(np.power(pred - y_test, 2)))
+        return
+
+    train_loader, val_loader, test_loader = createDataLoader(feature_train, feature_val,
+                                                             feature_test, y_train, y_val, y_test)
+    
+    num_features = feature_train.shape[1]
     model = Models.Base(num_features, opt)
     print(model)
 
@@ -250,6 +261,48 @@ def main():
     # test loss:
     print('test loss: ')
     val(best_model, test_loader, 0, criterion)
+
+
+def predictDataLoad():
+    # Load old version processed data
+    feature_train, feature_val, feature_test = (np.loadtxt('all_data/p_feature_train'),
+                                                np.loadtxt('all_data/p_feature_val'),
+                                                np.loadtxt('all_data/p_feature_test'))
+    y_train, y_val, y_test = (np.loadtxt('all_data/p_y_train'),
+                              np.loadtxt('all_data/p_y_val'),
+                              np.loadtxt('all_data/p_y_test'))
+    return feature_train, feature_val, feature_test, y_train, y_val, y_test
+
+    
+def predictOldData():
+    feature_train, feature_val, feature_test, y_train, y_val, y_test = predictDataLoad()
+    print(feature_train.shape, feature_val.shape, feature_test.shape)
+
+    if not opt.trained_model:
+        raise Exception('Need to specify the path of trained model by --trained_model')
+    checkpoint = torch.load(opt.trained_model,
+                            map_location=lambda storage, loc: storage,
+                            pickle_module=dill)
+    criterion = nn.MSELoss()
+    num_features = feature_train.shape[1]
+    model = Models.Base(num_features, opt)
+    print(model)
+
+    model.load_state_dict(checkpoint['model'])
+    if opt.gpu >= 0:
+        model.cuda()
+        criterion.cuda()
+
+    print("Computing test loss ... ")
+    val(model, testData, criterion)
+
+
+
+def main():
+    if opt.mode == 'train':
+        trainAllData()
+    elif opt.mode == 'pred':
+        predictOldData()
 
 
 if __name__ == "__main__":
