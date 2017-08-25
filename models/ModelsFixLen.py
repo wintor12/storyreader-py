@@ -50,7 +50,10 @@ class RegionalReader(nn.Module):
             outputs.append(x)
         r_emb = torch.stack(outputs, 1)
         r_emb = self.dropout(r_emb.view(r_emb.size(0), -1))
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output
 
@@ -79,7 +82,10 @@ class SequentialReader(RegionalReader):
         r_emb = torch.stack(outputs, 1)
 
         r_emb = self.dropout(r_emb.view(r_emb.size(0), -1))
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output
 
@@ -107,6 +113,9 @@ class HolisticReader(RegionalReader):
         gate = F.sigmoid(gate_r_input + gate_h_input)  # batch x regions x 10
         r_emb = torch.mul(gate, r_output)
         r_emb = self.dropout(r_emb.view(r_emb.size(0), -1))
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output

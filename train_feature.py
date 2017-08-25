@@ -357,17 +357,20 @@ def predictOldData():
         return pred
 
     def savePredict(pred, fname):
-        np.savetxt(fname, pred.numpy())
+        pred = pred.numpy()
+        np.savetxt('all_data/base_y_' + fname, pred)
+        y = np.loadtxt('all_data/p_y_' + fname)
+        np.savetxt('all_data/diff_y_' + fname, y - pred)
 
     loss, pred = val(model, train_loader, 0, criterion)
     pred = computeLoss(pred, y_train)
-    savePredict(pred, 'all_data/base_y_train')
+    savePredict(pred, 'train')
     loss, pred = val(model, val_loader, 0, criterion)
     pred = computeLoss(pred, y_val)
-    savePredict(pred, 'all_data/base_y_val')
+    savePredict(pred, 'val')
     loss, pred = val(model, test_loader, 0, criterion)
     pred = computeLoss(pred, y_test)
-    savePredict(pred, 'all_data/base_y_test')
+    savePredict(pred, 'test')
 
 
 def main():

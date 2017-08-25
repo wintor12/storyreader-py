@@ -54,7 +54,7 @@ class StoryDataset(torchtext.data.Dataset):
             return q_list
 
         examples = []
-        self.src_vocabs = []
+
         with codecs.open(src_path, 'r', 'utf-8') as src_file, \
              codecs.open(question_path, 'r', 'utf-8') as q_file, \
              codecs.open(feature_path, 'r', 'utf-8') as f_file, \
