@@ -128,10 +128,9 @@ class StoryDataset(torchtext.data.Dataset):
         self.__dict__.update(d)
 
 
-
 class FeatureDataset(torchtext.data.Dataset):
 
-    def __init__(self, fields, feature_path, date_path, opt, **kwargs):
+    def __init__(self, fields, feature_path, tgt_path, date_path, opt, **kwargs):
 
         examples = []
         with codecs.open(feature_path, 'r', 'utf-8') as f_file, \
@@ -154,7 +153,6 @@ class FeatureDataset(torchtext.data.Dataset):
                          for ex in examples])
 
         super(FeatureDataset, self).__init__(examples, fields)
-
 
     @staticmethod
     def get_fields(opt):

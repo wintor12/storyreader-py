@@ -111,12 +111,11 @@ def processDate(date_path, save_path, current_date):
         dates = p.readlines()
     dates = [d.strip().split('-') for d in dates]
     days = [str((current_date - date(int(d[0]), int(d[1]), int(d[2]))).days)
-             for d in dates]
+            for d in dates]
     with open(save_path, 'w') as p:
         p.write('\n'.join(days))
 
 
-        
 def main():
     # train_examples = loadData(src_path, question_path,
     # feature_path, tgt_path, time_path)
@@ -144,6 +143,7 @@ def main():
     processDate('./all_data/date2_train', './all_data/day2_train', current_date2)
     processDate('./all_data/date2_val', './all_data/day2_val', current_date2)
     processDate('./all_data/date2_test', './all_data/day2_test', current_date2)
+
 
 if __name__ == '__main__':
     main()
