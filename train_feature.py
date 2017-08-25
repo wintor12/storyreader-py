@@ -14,10 +14,13 @@ import dill
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--day_feature', action='store_true',
+                    help='if true, append day feature, dimension not match bug exists')
 parser.add_argument('--mode', default='train', type=str,
                     help='''train | pred, train base model using new and old dataset,
                     predict log upvote using only old dataset''')
-parser.add_argument('--trained_model', type=str, help='trained model to load in pred mode')
+parser.add_argument('--trained_model', type=str,
+                    help='trained model to load in pred mode')
 parser.add_argument('--model', default='nn', type=str, help='model')
 parser.add_argument('--batchnorm', action='store_true')
 
@@ -94,6 +97,7 @@ def val(model, val_loader, epoch, criterion):
     model.eval()
     criterion.size_average = False
     loss = 0
+    outputs = []
     for batch_idx, (data, target) in enumerate(val_loader):
         target = target.float()
         if len(opt.gpus) > 0:
@@ -101,9 +105,10 @@ def val(model, val_loader, epoch, criterion):
         data, target = Variable(data, volatile=True), Variable(target, volatile=True)
         output = model(data)
         loss += criterion(output, target)
+        outputs.append(output)
     loss /= len(val_loader.dataset)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
-    return loss
+    return loss, torch.cat(outputs)
 
 
 def dataLoad():
@@ -134,12 +139,15 @@ def dataLoad():
             day = np.expand_dims(day, -1)
         return np.append(day, feature, axis=1)
 
-    feature_train, feature_val, feature_test = (appendDay(day_train, feature_train),
-                                                appendDay(day_val, feature_val),
-                                                appendDay(day_test, feature_test))
-    feature2_train, feature2_val, feature2_test = (appendDay(day2_train, feature2_train),
-                                                   appendDay(day2_val, feature2_val),
-                                                   appendDay(day2_test, feature2_test))
+    if opt.day_feature:
+        feature_train, feature_val, feature_test = (appendDay(day_train, feature_train),
+                                                    appendDay(day_val, feature_val),
+                                                    appendDay(day_test, feature_test))
+        feature2_train, feature2_val, feature2_test = (appendDay(day2_train,
+                                                                 feature2_train),
+                                                       appendDay(day2_val, feature2_val),
+                                                       appendDay(day2_test,
+                                                                 feature2_test))
 
     def appendData(data1, data2):
         return np.append(data1, data2, axis=0)
@@ -151,16 +159,13 @@ def dataLoad():
                               appendData(y_val, y2_val),
                               appendData(y_test, y2_test))
 
-    # Only take the first two features: days, views
-    feature_train, feature_val, feature_test = (feature_train[:, :2],
-                                                feature_val[:, :2],
-                                                feature_test[:, :2])
-
     # add log view feature
-    feature_train = np.append(feature_train,
-                              np.log(feature_train[:, 1]).reshape(-1, 1), 1)
-    feature_val = np.append(feature_val, np.log(feature_val[:, 1]).reshape(-1, 1), 1)
-    feature_test = np.append(feature_test, np.log(feature_test[:, 1]).reshape(-1, 1), 1)
+    feature_train = np.append(np.log(feature_train[:, 0]).reshape(-1, 1),
+                              feature_train, 1)
+    feature_val = np.append(np.log(feature_val[:, 0]).reshape(-1, 1),
+                            feature_val, 1)
+    feature_test = np.append(np.log(feature_test[:, 0]).reshape(-1, 1),
+                             feature_test, 1)
 
     # standardize features
     train_mean = np.mean(feature_train, 0)
@@ -172,24 +177,24 @@ def dataLoad():
     # log upvotes
     y_train, y_val, y_test = np.log(y_train + 1), np.log(y_val + 1), np.log(y_test + 1)
 
-    return feature_train[:, 1:], feature_val[:, 1:], \
-        feature_test[:, 1:], y_train, y_val, y_test
+    return feature_train[:, :2], feature_val[:, :2], \
+        feature_test[:, :2], y_train, y_val, y_test
 
 
 def createDataLoader(feature_train, feature_val, feature_test,
-                     y_train, y_val, y_test):
+                     y_train, y_val, y_test, train=True):
     feature_train, feature_val, feature_test = (torch.from_numpy(feature_train).float(),
                                                 torch.from_numpy(feature_val).float(),
                                                 torch.from_numpy(feature_test).float())
     y_train, y_val, y_test = (torch.from_numpy(y_train).float(),
                               torch.from_numpy(y_val).float(),
                               torch.from_numpy(y_test).float())
-    print(feature_train.size(), feature_val.size(), y_train.size(), y_val.size())
+
     dataset_train, dataset_val, dataset_test = (TensorDataset(feature_train, y_train),
                                                 TensorDataset(feature_val, y_val),
                                                 TensorDataset(feature_test, y_test))
     train_loader = DataLoader(dataset_train, batch_size=opt.batchSize,
-                              shuffle=True, num_workers=1)
+                              shuffle=train, num_workers=1)
     val_loader = DataLoader(dataset_val, batch_size=opt.batchSize,
                             shuffle=False, num_workers=1)
     test_loader = DataLoader(dataset_test, batch_size=opt.batchSize,
@@ -209,8 +214,9 @@ def trainAllData():
         return
 
     train_loader, val_loader, test_loader = createDataLoader(feature_train, feature_val,
-                                                             feature_test, y_train, y_val, y_test)
-    
+                                                             feature_test, y_train,
+                                                             y_val, y_test, True)
+
     num_features = feature_train.shape[1]
     model = Models.Base(num_features, opt)
     print(model)
@@ -271,31 +277,97 @@ def predictDataLoad():
     y_train, y_val, y_test = (np.loadtxt('all_data/p_y_train'),
                               np.loadtxt('all_data/p_y_val'),
                               np.loadtxt('all_data/p_y_test'))
-    return feature_train, feature_val, feature_test, y_train, y_val, y_test
+    return feature_train[:, :2], feature_val[:, :2], feature_test[:, :2], \
+        y_train, y_val, y_test
 
-    
+
 def predictOldData():
+    if opt.model != 'nn':
+        feature_train1, feature_val1, feature_test1, y_train1, \
+            y_val1, y_test1 = dataLoad()
+        print(feature_train1.shape, feature_val1.shape, feature_test1.shape)
+
+        feature_train, feature_val, feature_test, \
+            y_train, y_val, y_test = predictDataLoad()
+        print(feature_train.shape, feature_val.shape, feature_test.shape)
+        print(y_train.shape, y_val.shape, y_test.shape)
+
+        model = RandomForestRegressor(n_estimators=100)
+        print(model)
+        print('all data results')
+        model.fit(feature_train1, y_train1)
+        pred = model.predict(feature_train1)
+        print(np.mean(np.power(pred - y_train1, 2)))
+        pred = model.predict(feature_val1)
+        print(np.mean(np.power(pred - y_val1, 2)))
+        pred = model.predict(feature_test1)
+        print(np.mean(np.power(pred - y_test1, 2)))
+
+        print('old data results')
+        pred = model.predict(feature_train)
+        print(np.mean(np.power(pred - y_train, 2)))
+        pred = model.predict(feature_val)
+        print(np.mean(np.power(pred - y_val, 2)))
+        pred = model.predict(feature_test)
+        print(np.mean(np.power(pred - y_test, 2)))
+
+        model = RandomForestRegressor(n_estimators=100)
+        print('train using old data only')
+        model.fit(feature_train, y_train)
+        pred = model.predict(feature_train)
+        print(np.mean(np.power(pred - y_train, 2)))
+        pred = model.predict(feature_val)
+        print(np.mean(np.power(pred - y_val, 2)))
+        pred = model.predict(feature_test)
+        print(np.mean(np.power(pred - y_test, 2)))
+        return
+
     feature_train, feature_val, feature_test, y_train, y_val, y_test = predictDataLoad()
     print(feature_train.shape, feature_val.shape, feature_test.shape)
+    print(y_train.shape, y_val.shape, y_test.shape)
 
+    train_loader, val_loader, test_loader = createDataLoader(feature_train, feature_val,
+                                                             feature_test, y_train,
+                                                             y_val, y_test, False)
     if not opt.trained_model:
         raise Exception('Need to specify the path of trained model by --trained_model')
     checkpoint = torch.load(opt.trained_model,
                             map_location=lambda storage, loc: storage,
                             pickle_module=dill)
+    model_opt = checkpoint['opt']
+
     criterion = nn.MSELoss()
     num_features = feature_train.shape[1]
-    model = Models.Base(num_features, opt)
-    print(model)
 
+    model = Models.Base(num_features, model_opt)
+    print(model)
     model.load_state_dict(checkpoint['model'])
-    if opt.gpu >= 0:
+
+    if len(opt.gpus) > 0:
         model.cuda()
         criterion.cuda()
 
     print("Computing test loss ... ")
-    val(model, testData, criterion)
 
+    def computeLoss(pred, y):
+        pred = pred.data.squeeze(1).cpu()
+        y = torch.from_numpy(y).float()
+        mse = torch.mean((pred - y) ** 2)
+        print('Manualy compute: ', mse)
+        return pred
+
+    def savePredict(pred, fname):
+        np.savetxt(fname, pred.numpy())
+
+    loss, pred = val(model, train_loader, 0, criterion)
+    pred = computeLoss(pred, y_train)
+    savePredict(pred, 'all_data/base_y_train')
+    loss, pred = val(model, val_loader, 0, criterion)
+    pred = computeLoss(pred, y_val)
+    savePredict(pred, 'all_data/base_y_val')
+    loss, pred = val(model, test_loader, 0, criterion)
+    pred = computeLoss(pred, y_test)
+    savePredict(pred, 'all_data/base_y_test')
 
 
 def main():

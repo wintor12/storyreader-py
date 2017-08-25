@@ -103,6 +103,7 @@ def main():
     y = torch.FloatTensor([ex.tgt for ex in testData])
     mse = torch.mean((pred - y) ** 2)
     print('Manualy compute: ', mse)
-    
+
+
 if __name__ == "__main__":
     main()
