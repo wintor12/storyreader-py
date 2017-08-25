@@ -61,4 +61,6 @@ python test.py --model MODEL_PATH
 ## Train view and log view feature:
 ```bash
 python train_feature.py --gpus 0
+python train_feature.py --gpus 0 --mode pred --trained_model feature_model/MODEL
 ```
+if want to use random forest, use --model RF
