@@ -23,6 +23,7 @@ parser.add_argument('--gpus', default=[], nargs='+', type=int,
 parser.add_argument('--text', action='store_true',
                     help='Use text feature only')
 
+
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
