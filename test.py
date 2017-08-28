@@ -60,6 +60,9 @@ def main():
 
     s_rcnn = Models.RegionalCNN(model_opt)
     q_rcnn = Models.RegionalCNN(model_opt)
+
+    if model_opt.text:
+        num_features = 0
     fc_input_dim = num_features + model_opt.r_emb * (
         model_opt.region_nums + 1 if model_opt.region_nums > 0 else 1)
     fc = Models.Fc(fc_input_dim, model_opt)
@@ -100,6 +103,7 @@ def main():
     indice = indice.data.cpu()
     _, order = torch.sort(indice)
     pred = torch.index_select(pred, 0, order)
+    print(pred)
     y = torch.FloatTensor([ex.tgt for ex in testData])
     mse = torch.mean((pred - y) ** 2)
     print('Manualy compute: ', mse)
