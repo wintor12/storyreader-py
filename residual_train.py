@@ -51,6 +51,9 @@ parser.add_argument('--epoch_fix_lr', type=int, default=20,
 parser.add_argument('--grad_clipping', type=float, default=0,
                     help='clip the gradients of region cnn')
 
+parser.add_argument('--crayon', action='store_true', help='visualization')
+parser.add_argument('--debug', action='store_true', help='debug the model')
+
 
 opt = parser.parse_args()
 print(opt)
@@ -68,7 +71,7 @@ if torch.cuda.is_available() and not opt.gpus:
     print("WARNING: You have a CUDA device, should run with -gpus 0")
 
 
-def train(model, trainData, epoch, optimizer, criterion):
+def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
     model.train()
     train = BucketIterator(
         dataset=trainData, batch_size=opt.batch_size,
@@ -90,10 +93,42 @@ def train(model, trainData, epoch, optimizer, criterion):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * train.batch_size, len(trainData),
                 100. * batch_idx / len(train), loss.data[0]))
+        if tb_train:
+            stat = Statistics(loss=loss.data[0])
+            if opt.debug:
+                feature_model = model.feature_model
+                text_model = model.text_model
+                stat = Statistics(loss=loss.data[0],
+                                  model_grad=utils.weight_grad_norm(
+                                      model.parameters()),
+                                  f_model_grad=utils.weight_grad_norm(
+                                      feature_model.parameters()),
+                                  t_model_grad=utils.weight_grad_norm(
+                                      text_model.parameters()),
+                                  embed_grad=utils.weight_grad_norm(
+                                      text_model.embed.parameters()),
+                                  q_grad=utils.weight_grad_norm(
+                                      text_model.q_rcnn.parameters()),
+                                  s_grad=utils.weight_grad_norm(
+                                      text_model.s_rcnn.parameters()),
+                                  fc_grad=utils.weight_grad_norm(
+                                      text_model.fc.parameters()),
+                                  # rnn_cell=utils.weight_grad_norm(
+                                  #     text_model.rnn_cell.parameters())
+                                  # if opt.reader == 's' else None,
+                                  # rnn=utils.weight_grad_norm(
+                                  #     text_model.rnn.parameters())
+                                  # if opt.reader == 'h' else None
+                )
+            tb_train.add_scalar_dict(
+                data=stat.__dict__,
+                step=epoch
+            )
+
         optimizer.step()
 
 
-def val(model, validData, epoch, criterion):
+def val(model, validData, epoch, criterion, tb_valid=None):
     model.eval()
     valid = BucketIterator(
         dataset=validData, batch_size=opt.batch_size,
@@ -107,6 +142,11 @@ def val(model, validData, epoch, criterion):
         loss += criterion(output, batch.tgt)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
+    if tb_valid:
+        tb_valid.add_scalar_dict(
+            data={'loss': loss.data[0]},
+            step=epoch)
+
     return loss
 
 
@@ -196,9 +236,19 @@ def main():
                                                factor=opt.decay_factor)
     loss_old, loss, loss_best = float("inf"), 0, float("inf")
     bestModel = None
+
+    tb_train, tb_valid = None, None
+    if opt.crayon:
+        tb_client = CrayonClient()
+        tb_name = '{}-{}'.format(datetime.now().strftime("%y%m%d-%H%M%S"),
+                                 opt.save)
+        tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
+        tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
+
+    
     for e in range(1, opt.epoch + 1):
-        train(residual_model, trainData, e, optimizer, criterion)
-        loss = val(residual_model, validData, e, criterion)
+        train(residual_model, trainData, e, optimizer, criterion, tb_train)
+        loss = val(residual_model, validData, e, criterion, tb_valid)
         if e > opt.epoch_fix_lr:
             scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
