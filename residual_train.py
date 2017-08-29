@@ -219,7 +219,7 @@ def main():
 
 
     print("Computing test loss ... ")
-    loss = val(bestModel, testData, criterion)
+    loss = val(bestModel, testData, 0, criterion)
     print(loss)
     # pred = pred.data.squeeze(1).cpu()
     # indice = indice.data.cpu()
