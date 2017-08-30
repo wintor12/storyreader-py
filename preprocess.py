@@ -53,7 +53,7 @@ def main():
         opt.train_tgt = 'diff_y_train'
         opt.valid_tgt = 'diff_y_val'
         opt.test_tgt = 'diff_y_test'
-    
+
     fields = StoryDataset.get_fields(opt)
     train = StoryDataset(fields, opt.data + opt.train_src,
                          opt.data + opt.train_question,
