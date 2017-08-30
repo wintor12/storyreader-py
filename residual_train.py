@@ -121,7 +121,7 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
                                   # rnn=utils.weight_grad_norm(
                                   #     text_model.rnn.parameters())
                                   # if opt.reader == 'h' else None
-                )
+                                  )
             tb_train.add_scalar_dict(
                 data=stat.__dict__,
                 step=epoch
