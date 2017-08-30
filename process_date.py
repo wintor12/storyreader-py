@@ -35,11 +35,11 @@ def loadTime(time_path):
 def loadData(src_path, question_path, feature_path, tgt_path, time_path):
     examples = []
     with codecs.open(src_path, 'r', 'utf-8') as src_file, \
-         codecs.open(question_path, 'r', 'utf-8') as q_file, \
-         codecs.open(feature_path, 'r', 'utf-8') as f_file, \
-         codecs.open(tgt_path, 'r', 'utf-8') as t_file, \
-         codecs.open(time_path, 'r', 'utf-8') as ti_file, \
-         codecs.open(title_path, 'r', 'utf-8') as title_file:
+        codecs.open(question_path, 'r', 'utf-8') as q_file, \
+        codecs.open(feature_path, 'r', 'utf-8') as f_file, \
+        codecs.open(tgt_path, 'r', 'utf-8') as t_file, \
+        codecs.open(time_path, 'r', 'utf-8') as ti_file, \
+            codecs.open(title_path, 'r', 'utf-8') as title_file:
         for i, (src_line, q_line, f_line, t_line, ti_line, title_line) in enumerate(
                 zip(src_file, q_file, f_file, t_file, ti_file, title_file)):
             src = src_line.strip().split()
