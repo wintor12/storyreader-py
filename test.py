@@ -21,25 +21,27 @@ if opt.gpu >= 0:
     torch.cuda.set_device(opt.gpu)
 
 
-def val(model, validData, criterion, tb_valid=None):
+def val(model, validData, criterion):
     model.eval()
     valid = BucketIterator(
         dataset=validData, batch_size=opt.batch_size,
         device=opt.gpu,
         repeat=False, train=False,
-        sort=True)
+        sort=False, shuffle=False)
 
     criterion.size_average = False
     loss = 0
+    outputs = []
+    indices = []
     for batch_idx, batch in enumerate(valid):
+        indice = batch.indices
         output = model(batch)
         loss += criterion(output, batch.tgt)
+        outputs.append(output)
+        indices.append(indice)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
-    if tb_valid:
-        tb_valid.add_scalar_dict(
-            data={'loss': loss.data[0]})
-    return loss
+    return loss, torch.cat(outputs, 0), torch.cat(indices, 0)
 
 
 def main():
@@ -51,13 +53,16 @@ def main():
 
     model_opt = checkpoint['opt']
     print(model_opt)
-    testData = torch.load(opt.data + 'valid.pt', pickle_module=dill)
+    testData = torch.load(opt.data + 'test.pt', pickle_module=dill)
 
     criterion = nn.MSELoss()
     num_features = len(testData[0].feature)
 
     s_rcnn = Models.RegionalCNN(model_opt)
     q_rcnn = Models.RegionalCNN(model_opt)
+
+    if model_opt.text:
+        num_features = 0
     fc_input_dim = num_features + model_opt.r_emb * (
         model_opt.region_nums + 1 if model_opt.region_nums > 0 else 1)
     fc = Models.Fc(fc_input_dim, model_opt)
@@ -92,9 +97,16 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    tb_valid = None
     print("Computing test loss ... ")
-    val(model, testData, criterion, tb_valid)
+    loss, pred, indice = val(model, testData, criterion)
+    pred = pred.data.squeeze(1).cpu()
+    indice = indice.data.cpu()
+    _, order = torch.sort(indice)
+    pred = torch.index_select(pred, 0, order)
+    print(pred)
+    y = torch.FloatTensor([ex.tgt for ex in testData])
+    mse = torch.mean((pred - y) ** 2)
+    print('Manualy compute: ', mse)
 
 
 if __name__ == "__main__":

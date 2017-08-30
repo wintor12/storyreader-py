@@ -54,3 +54,23 @@ python train.py --pre_word_vec --gpus 0
 ```bash
 python test.py --model MODEL_PATH
 ```
+
+===============================================
+
+# Separate training
+## Train view and log view feature:
+```bash
+python train_feature.py --gpus 0
+python train_feature.py --gpus 0 --mode pred --trained_model feature_model/MODEL
+```
+if want to use random forest, use --model RF
+## Train text:
+```bash
+python preprocess.py --fix_length 0 --data ./story_model/ --text
+python train.py --region_nums 0 --gpus 0 --text 
+```
+## Train together:
+```bash
+python preprocess.py --fix_length 0 --data ./residual_model/
+python residual_train.py --f_model feature_model --t_model text_model --gpus 0 --data residual_model/
+```
