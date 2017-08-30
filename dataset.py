@@ -54,24 +54,24 @@ class StoryDataset(torchtext.data.Dataset):
             return q_list
 
         examples = []
-
+        self.src_vocabs = []
         with codecs.open(src_path, 'r', 'utf-8') as src_file, \
-             codecs.open(question_path, 'r', 'utf-8') as q_file, \
-             codecs.open(feature_path, 'r', 'utf-8') as f_file, \
-             codecs.open(tgt_path, 'r', 'utf-8') as t_file:
-            for i, (src_line, q_line, f_line, t_line) in enumerate(
+            codecs.open(question_path, 'r', 'utf-8') as q_file, \
+            codecs.open(feature_path, 'r', 'utf-8') as f_file,  \
+            codecs.open(tgt_path, 'r', 'utf-8') as t_file:
+                for i, (src_line, q_line, f_line, t_line) in enumerate(
                     zip(src_file, q_file, f_file, t_file)):
 
-                src = src_line.strip().split()
-                src = src_preprocessing(src)
-                question = q_line.strip().split()
-                question = question_preprocessing(question)
-                feature = f_line.strip().split()
-                feature = [float(x) for x in feature]
-                tgt = float(t_line.strip())
-                d = {'src': src, 'question': question, 'indices': i,
-                     'feature': feature, 'tgt': tgt}
-                examples.append(d)
+                    src = src_line.strip().split()
+                    src = src_preprocessing(src)
+                    question = q_line.strip().split()
+                    question = question_preprocessing(question)
+                    feature = f_line.strip().split()
+                    feature = [float(x) for x in feature]
+                    tgt = float(t_line.strip())
+                    d = {'src': src, 'question': question, 'indices': i,
+                         'feature': feature, 'tgt': tgt}
+                    examples.append(d)
 
         keys = examples[0].keys()
         fields = [(k, fields[k]) for k in keys]
@@ -118,61 +118,6 @@ class StoryDataset(torchtext.data.Dataset):
     def build_vocab(train, opt):
         fields = train.fields
         fields['src'].build_vocab(train, max_size=opt.src_vocab_size)
-
-    def __getstate__(self):
-        "Need this for pickle save"
-        return self.__dict__
-
-    def __setstate__(self, d):
-        "Need this for pickle load"
-        self.__dict__.update(d)
-
-
-class FeatureDataset(torchtext.data.Dataset):
-
-    def __init__(self, fields, feature_path, tgt_path, date_path, opt, **kwargs):
-
-        examples = []
-        with codecs.open(feature_path, 'r', 'utf-8') as f_file, \
-             codecs.open(date_path, 'r', 'utf-8') as d_file, \
-             codecs.open(tgt_path, 'r', 'utf-8') as t_file:
-            for i, (f_line, d_line, t_line) in enumerate(
-                    zip(f_file, d_file, t_file)):
-
-                feature = f_line.strip().split()
-                feature = [float(x) for x in feature]
-                day = float(d_line.strip().split())
-                tgt = float(t_line.strip())
-                d = {'indices': i, 'day': day,
-                     'feature': feature, 'tgt': tgt}
-                examples.append(d)
-
-        keys = examples[0].keys()
-        fields = [(k, fields[k]) for k in keys]
-        examples = list([torchtext.data.Example.fromlist([ex[k] for k in keys], fields)
-                         for ex in examples])
-
-        super(FeatureDataset, self).__init__(examples, fields)
-
-    @staticmethod
-    def get_fields(opt):
-        fields = {}
-        fields['indices'] = torchtext.data.Field(
-            use_vocab=False,
-            tensor_type=torch.LongTensor,
-            sequential=False)
-
-        fields['feature'] = torchtext.data.Field(
-            use_vocab=False,
-            tensor_type=torch.FloatTensor,
-            sequential=False)
-
-        fields['tgt'] = torchtext.data.Field(
-            use_vocab=False,
-            tensor_type=torch.FloatTensor,
-            sequential=False)
-
-        return fields
 
     def __getstate__(self):
         "Need this for pickle save"
