@@ -25,14 +25,16 @@ parser.add_argument('--f_model', required=True,
                     help='the path to load feature model')
 parser.add_argument('--t_model', required=True,
                     help='the path to load text model')
-parser.add_argument('--data', default='./story_model/', help='the path to load data')
+parser.add_argument('--data', default='./residual_model/', help='the path to load data')
 parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--epoch', type=int, default=40, help='number of epochs to train for')
 
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--save', default='./story_model/',
+parser.add_argument('--save', default='./residual_model/',
                     help='the path to save model files')
+parser.add_argument('--fix_word_vec', action='store_true',
+                    help='if true, word embeddings are fixed during training')
 
 
 # optimizer
@@ -215,13 +217,33 @@ def main():
     print(model)
     model.load_state_dict(checkpoint['model'])
 
+    # fix word embeddings
+    if opt.fix_word_vec:
+        model.embed.weight.requires_grad = False
+
     residual_model = RModel.ResidualModel(feature_model, model)
+
+    nParams = sum([p.nelement() for p in residual_model.parameters()])
+    print('* number of parameters: %d' % nParams)
+    enc, dec = 0, 0
+    for name, param in residual_model.named_parameters():
+        if param.requires_grad:
+            if 'embed' in name:
+                print(name, param.nelement())
+            elif 'feature_model' in name:
+                enc += param.nelement()
+            elif 'text_model' in name:
+                dec += param.nelement()
+            else:
+                print(name, param.nelement())
+    print('feature_model: ', enc)
+    print('text_model: ', dec)
+
     criterion = nn.MSELoss()
     if len(opt.gpus) > 0:
         residual_model.cuda()
         criterion.cuda()
 
-    
     if opt.optim == 'sgd':
         optimizer = optim.SGD(filter(lambda p: p.requires_grad,
                                      residual_model.parameters()),
@@ -245,7 +267,6 @@ def main():
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
 
-    
     for e in range(1, opt.epoch + 1):
         train(residual_model, trainData, e, optimizer, criterion, tb_train)
         loss = val(residual_model, validData, e, criterion, tb_valid)
@@ -266,7 +287,6 @@ def main():
                 torch.save(checkpoint, os.path.join(opt.save, filename),
                            pickle_module=dill)
         loss_old = loss.data[0]
-
 
     print("Computing test loss ... ")
     loss = val(bestModel, testData, 0, criterion)
