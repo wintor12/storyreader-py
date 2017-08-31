@@ -67,10 +67,17 @@ if want to use random forest, use --model RF
 ## Train text:
 ```bash
 python preprocess.py --fix_length 0 --data ./story_model/ --text
-python train.py --region_nums 0 --gpus 0 --text 
+python train.py --region_nums 0 --gpus 0 --r_emb 50 --text 
+python test.py --model story_model/MODEL --gpu 1 --data story_model/
 ```
 ## Train together:
 ```bash
 python preprocess.py --fix_length 0 --data ./residual_model/
 python residual_train.py --f_model feature_model --t_model text_model --gpus 0 --data residual_model/
+```
+## Train with fixed word embedding
+```bash
+python preprocess.py --pre_word_vec WORDVEC_PATH --fix_length 0 --text --data story_model/
+python train.py --reader h --text --pre_word_vec --fix_word_vec --region_nums 0 --r_emb 50 --data story_model/ --save story_model/model/ --gpus 0
+python residual_train.py --f_model feature_model/MODEL --t_model story_model/MODEL --gpus 2 --data residual_model/ --save residual_model/model
 ```
