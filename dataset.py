@@ -55,9 +55,10 @@ class StoryDataset(torchtext.data.Dataset):
 
         examples = []
 
-        with codecs.open(src_path, 'r', 'utf-8') as src_file, \
-            codecs.open(question_path, 'r', 'utf-8') as q_file, \
-            codecs.open(feature_path, 'r', 'utf-8') as f_file, \
+        with \
+                codecs.open(src_path, 'r', 'utf-8') as src_file, \
+                codecs.open(question_path, 'r', 'utf-8') as q_file, \
+                codecs.open(feature_path, 'r', 'utf-8') as f_file, \
                 codecs.open(tgt_path, 'r', 'utf-8') as t_file:
             for i, (src_line, q_line, f_line, t_line) in enumerate(
                     zip(src_file, q_file, f_file, t_file)):
@@ -133,8 +134,9 @@ class FeatureDataset(torchtext.data.Dataset):
     def __init__(self, fields, feature_path, tgt_path, date_path, opt, **kwargs):
 
         examples = []
-        with codecs.open(feature_path, 'r', 'utf-8') as f_file, \
-            codecs.open(date_path, 'r', 'utf-8') as d_file,     \
+        with \
+                codecs.open(feature_path, 'r', 'utf-8') as f_file, \
+                codecs.open(date_path, 'r', 'utf-8') as d_file, \
                 codecs.open(tgt_path, 'r', 'utf-8') as t_file:
             for i, (f_line, d_line, t_line) in enumerate(
                     zip(f_file, d_file, t_file)):
