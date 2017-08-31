@@ -15,6 +15,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import os
 import utils
 from utils import Statistics
+import copy
 
 
 parser = argparse.ArgumentParser()
@@ -130,26 +131,35 @@ def train(model, trainData, epoch, optimizer, criterion, tb_train=None):
         optimizer.step()
 
 
-def val(model, validData, epoch, criterion, tb_valid=None):
+def val(model, validData, epoch, criterion, tb_valid=None, test=False):
     model.eval()
     valid = BucketIterator(
         dataset=validData, batch_size=opt.batch_size,
         device=opt.gpus[0] if opt.gpus else -1,
         repeat=False, train=False, sort=True)
+    if test:
+        valid = BucketIterator(
+            dataset=validData, batch_size=opt.batch_size,
+            device=opt.gpus[0] if opt.gpus else -1,
+            repeat=False, train=False, sort=False, shuffle=False)
 
     criterion.size_average = False
     loss = 0
+    outputs = []
+    indices = []
     for batch_idx, batch in enumerate(valid):
+        indice = batch.indices
         output = model(batch)
         loss += criterion(output, batch.tgt)
+        outputs.append(output)
+        indices.append(indice)
     loss /= len(validData)
     print('Eval: \tLoss: {:.6f}'.format(loss.data[0]))
     if tb_valid:
         tb_valid.add_scalar_dict(
             data={'loss': loss.data[0]},
             step=epoch)
-
-    return loss
+    return loss, torch.cat(outputs), torch.cat(indices)
 
 
 def main():
@@ -252,12 +262,6 @@ def main():
         optimizer = optim.Adam(filter(lambda p: p.requires_grad,
                                       residual_model.parameters()),
                                lr=opt.lr)
-    # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min',
-                                               patience=opt.patience,
-                                               factor=opt.decay_factor)
-    loss_old, loss, loss_best = float("inf"), 0, float("inf")
-    bestModel = None
 
     tb_train, tb_valid = None, None
     if opt.crayon:
@@ -267,15 +271,22 @@ def main():
         tb_train = tb_client.create_experiment('{}/train'.format(tb_name))
         tb_valid = tb_client.create_experiment('{}/valid'.format(tb_name))
 
+    # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min',
+                                               patience=opt.patience,
+                                               factor=opt.decay_factor)
+    loss_old, loss, loss_best = float("inf"), 0, float("inf")
+    bestModel = None
+
     for e in range(1, opt.epoch + 1):
         train(residual_model, trainData, e, optimizer, criterion, tb_train)
-        loss = val(residual_model, validData, e, criterion, tb_valid)
+        loss, _, _ = val(residual_model, validData, e, criterion, tb_valid)
         if e > opt.epoch_fix_lr:
             scheduler.step(loss.data[0])
         print('LR: \t: {:.10f}'.format(optimizer.param_groups[0]['lr']))
         if loss.data[0] < loss_old:
             if loss.data[0] < loss_best:
-                bestModel = residual_model
+                bestModel = copy.deepcopy(residual_model)
                 loss_best = loss.data[0]
                 checkpoint = {
                     'model': residual_model.state_dict(),
@@ -288,17 +299,19 @@ def main():
                            pickle_module=dill)
         loss_old = loss.data[0]
 
+    print("Best validation loss")
+    print(loss_best)
     print("Computing test loss ... ")
-    loss = val(bestModel, testData, 0, criterion)
-    print(loss)
-    # pred = pred.data.squeeze(1).cpu()
-    # indice = indice.data.cpu()
-    # _, order = torch.sort(indice)
-    # pred = torch.index_select(pred, 0, order)
-    # print(pred)
-    # y = torch.FloatTensor([ex.tgt for ex in testData])
-    # mse = torch.mean((pred - y) ** 2)
-    # print('Manualy compute: ', mse)
+    loss, pred, indice = val(bestModel, testData, 0, criterion, test=True)
+    print(loss[0])
+    pred = pred.data.squeeze(1).cpu()
+    indice = indice.data.cpu()
+    _, order = torch.sort(indice)
+    pred = torch.index_select(pred, 0, order)
+    print(pred)
+    y = torch.FloatTensor([ex.tgt for ex in testData])
+    mse = torch.mean((pred - y) ** 2)
+    print('Manualy compute: ', mse)
 
 
 if __name__ == "__main__":
