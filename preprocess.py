@@ -6,6 +6,10 @@ import utils
 
 
 parser = argparse.ArgumentParser()
+
+parser.add_argument('--text', action='store_true',
+                    help='Use text feature only')
+
 parser.add_argument('--train_src', default='s_train', help='train story texts')
 parser.add_argument('--train_tgt', default='p_y_train', help='train upvotes')
 parser.add_argument('--train_feature', default='p_feature_train',
@@ -45,6 +49,10 @@ print(opt)
 
 def main():
     print('Preprocessing ... ')
+    if opt.text:
+        opt.train_tgt = 'diff_y_train'
+        opt.valid_tgt = 'diff_y_val'
+        opt.test_tgt = 'diff_y_test'
 
     fields = StoryDataset.get_fields(opt)
     train = StoryDataset(fields, opt.data + opt.train_src,

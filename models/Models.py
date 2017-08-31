@@ -8,6 +8,7 @@ import dataset
 class Fc(nn.Module):
     def __init__(self, feature, opt):
         super(Fc, self).__init__()
+        self.opt = opt
         self.fc1 = nn.Linear(feature, opt.hidden1)
         self.fc2 = nn.Linear(opt.hidden1, opt.hidden2)
         self.fc3 = nn.Linear(opt.hidden2, 1)
@@ -18,7 +19,10 @@ class Fc(nn.Module):
         x = self.dropout(x)
         x = F.relu(self.fc2(x))
         x = self.dropout(x)
-        x = F.relu(self.fc3(x))
+        if self.opt.text:
+            x = self.fc3(x)
+        else:
+            x = F.relu(self.fc3(x))
         return x
 
 
@@ -126,7 +130,10 @@ class RegionalReader(nn.Module):
             r_emb = r_emb.mean(1)
         r_emb = r_emb.view(r_emb.size(0), -1)
         # r_emb = self.dropout(r_emb)
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if not self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output
 
@@ -158,7 +165,10 @@ class SequentialReader(RegionalReader):
             r_emb = r_emb.mean(dim=1)
         r_emb = r_emb.view(r_emb.size(0), -1)
         # r_emb = self.dropout(r_emb)
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if not self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output
 
@@ -188,6 +198,9 @@ class HolisticReader(RegionalReader):
         r_emb = torch.mul(gate, h_output)
         r_emb = r_emb.view(r_emb.size(0), -1)
         # r_emb = self.dropout(r_emb)
-        fc_input = torch.cat([r_emb, batch.feature], 1)
+        if not self.opt.text:
+            fc_input = torch.cat([r_emb, batch.feature], 1)
+        else:
+            fc_input = r_emb
         output = self.fc(fc_input)
         return output

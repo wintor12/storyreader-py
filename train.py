@@ -20,6 +20,10 @@ parser.add_argument('--reader', type=str, default='r',
                     help='r(Regional Reader)|s(Sequential Reader)|h(Holistic Reader)')
 parser.add_argument('--gpus', default=[], nargs='+', type=int,
                     help='Use CUDA on the listed devices')
+parser.add_argument('--text', action='store_true',
+                    help='Use text feature only')
+
+
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
@@ -181,6 +185,10 @@ def main():
 
     s_rcnn = Models.RegionalCNN(opt)
     q_rcnn = Models.RegionalCNN(opt)
+
+    if opt.text:
+        num_features = 0
+    print('num_features', num_features)
     fc_input_dim = num_features + opt.r_emb * (opt.region_nums +
                                                1 if opt.region_nums > 0 else 1)
     fc = Models.Fc(fc_input_dim, opt)
