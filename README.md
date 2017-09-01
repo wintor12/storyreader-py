@@ -78,6 +78,11 @@ python residual_train.py --f_model feature_model --t_model text_model --gpus 0 -
 ## Train with fixed word embedding
 ```bash
 python preprocess.py --pre_word_vec WORDVEC_PATH --fix_length 0 --text --data story_model/
-python train.py --reader h --text --pre_word_vec --fix_word_vec --region_nums 0 --r_emb 50 --data story_model/ --save story_model/model/ --gpus 0
-python residual_train.py --f_model feature_model/MODEL --t_model story_model/MODEL --gpus 2 --data residual_model/ --save residual_model/model
+python train.py --reader h --text --pre_word_vec --fix_word_vec --region_nums 0 --r_emb 50 --data story_model/ --save story_model/FOLDER/ --gpus 0
+python residual_train.py --f_model feature_model/MODEL --t_model story_model/MODEL --gpus 2 --data residual_model/ --save residual_model/FOLDER/
 ```
+## Train with combined word embedding
+```bash
+python preprocess.py --text --pre_word_vec WORDVEC1 --pre_word_vec2 WORDVEC2 --fix_length 0 --data story_model/ --save_word_vec_name wv_combined.pt
+python train.py --reader h --text --pre_word_vec wv_combined.pt --fix_word_vec --region_nums 0 --r_emb 50 --data story_model/ --save story_model/FOLDER/ --gpus 2
+python residual_train.py --f_model feature_model/MODEL --t_model story_model/MODEL --gpus 2 --data residual_model/ --save residual_model/FOLDER/
