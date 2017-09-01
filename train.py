@@ -56,7 +56,7 @@ parser.add_argument('--param_init', type=float, default=0.1,
 
 parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
-parser.add_argument('--pre_word_vec', action='store_true',
+parser.add_argument('--pre_word_vec', type=str, default='wv.pt',
                     help='Use pre-trained word embeddings')
 parser.add_argument('--fix_word_vec', action='store_true',
                     help='if true, word embeddings are fixed during training')
@@ -228,7 +228,7 @@ def main():
     # load pre_trained word vectors
     wv = None
     if opt.pre_word_vec:
-        wv = torch.load(opt.data + 'wv.pt', pickle_module=dill)
+        wv = torch.load(opt.data + opt.pre_word_vec, pickle_module=dill)
         model.load_pretrained_vectors(wv)
 
     # fix word embeddings

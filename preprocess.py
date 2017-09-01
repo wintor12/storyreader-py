@@ -39,6 +39,10 @@ parser.add_argument('--word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
 parser.add_argument('--pre_word_vec', type=str, default='',
                     help='pre-trained Word embedding path')
+parser.add_argument('--pre_word_vec2', type=str, default='',
+                    help='if specified, combine two word embeddings')
+parser.add_argument('--save_word_vec_name', type=str, default='wv.pt',
+                    help='the name of word vector')
 parser.add_argument('--word_vec_only', action='store_true',
                     help='Only preprocess word embeddings')
 
@@ -73,9 +77,14 @@ def main():
 
     if opt.pre_word_vec:
         print('Saving pretrained word vectors ... ')
-        wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
-                                     fields['src'].vocab, unk_init='random')
-        torch.save(wv, opt.data + 'wv.pt', pickle_module=dill)
+        if opt.pre_word_vec2:
+            wv = utils.load_combined_word_vectors(opt.pre_word_vec, opt.pre_word_vec2,
+                                                  opt.word_vec_size,
+                                                  fields['src'].vocab, unk_init='random')
+        else:
+            wv = utils.load_word_vectors(opt.pre_word_vec, opt.word_vec_size,
+                                         fields['src'].vocab, unk_init='random')
+        torch.save(wv, opt.data + opt.save_word_vec_name, pickle_module=dill)
         if opt.word_vec_only:
             return
 
