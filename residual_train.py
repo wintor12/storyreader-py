@@ -53,6 +53,9 @@ parser.add_argument('--epoch_fix_lr', type=int, default=20,
                     help='number of epochs to train for')
 parser.add_argument('--grad_clipping', type=float, default=0,
                     help='clip the gradients of region cnn')
+parser.add_argument('--weight_decay', type=float, default=0,
+                    help='l2 norm')
+
 
 parser.add_argument('--crayon', action='store_true', help='visualization')
 parser.add_argument('--debug', action='store_true', help='debug the model')
@@ -257,11 +260,13 @@ def main():
     if opt.optim == 'sgd':
         optimizer = optim.SGD(filter(lambda p: p.requires_grad,
                                      residual_model.parameters()),
-                              lr=opt.lr)
+                              lr=opt.lr,
+                              weight_decay=opt.weight_decay)
     elif opt.optim == 'adam':
         optimizer = optim.Adam(filter(lambda p: p.requires_grad,
                                       residual_model.parameters()),
-                               lr=opt.lr)
+                               lr=opt.lr,
+                               weight_decay=opt.weight_decay)
 
     tb_train, tb_valid = None, None
     if opt.crayon:
