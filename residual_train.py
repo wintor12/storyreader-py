@@ -57,7 +57,6 @@ parser.add_argument('--weight_decay', type=float, default=0,
                     help='l2 norm')
 
 
-
 parser.add_argument('--crayon', action='store_true', help='visualization')
 parser.add_argument('--debug', action='store_true', help='debug the model')
 
